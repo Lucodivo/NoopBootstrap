@@ -1,7 +1,12 @@
 #include <SDL.h>
+
+#include "glm/vec3.hpp"
+
 #include "types.h"
 
 int main(int argc, char* argv[]) {
+  glm::vec3 screenColor = glm::vec3{0.5f, 0.0f, 0.0f};
+
   SDL_Init(SDL_INIT_VIDEO);
 
   SDL_Window *window = SDL_CreateWindow(
@@ -14,7 +19,7 @@ int main(int argc, char* argv[]) {
   );
 
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-  SDL_SetRenderDrawColor(renderer, 128, 0, 0, SDL_ALPHA_OPAQUE);
+  SDL_SetRenderDrawColor(renderer, u8(255 * screenColor.r), u8(255 * screenColor.g), u8(255 * screenColor.b), SDL_ALPHA_OPAQUE);
   SDL_RenderClear(renderer);
   SDL_RenderPresent(renderer);
 

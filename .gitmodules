@@ -2,3 +2,7 @@
 	path = external/sdl2
 	url = https://github.com/libsdl-org/SDL
 	branch = 2.0.22
+[submodule "external/glm"]
+	path = external/glm
+	url = https://github.com/g-truc/glm
+	branch = 0.9.8
