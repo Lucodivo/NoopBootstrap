@@ -1,11 +1,5 @@
 #pragma once
 
-struct VertexAtt {
-  GLuint arrayObject;
-  GLuint bufferObject;
-  GLuint indexObject;
-};
-
 const f32 cubePosAttributes[] = {
         // positions
         // face #1
@@ -60,6 +54,8 @@ VertexAtt initCubePosVertexAttBuffers() {
   glGenVertexArrays(1, &vertexAtt.arrayObject);
   glGenBuffers(1, &vertexAtt.bufferObject);
   glGenBuffers(1, &vertexAtt.indexObject);
+  vertexAtt.indexCount = ArrayCount(cubeAttributeIndices);
+  vertexAtt.indexTypeSizeInBytes = sizeof(cubeAttributeIndices) / ArrayCount(cubeAttributeIndices);
 
   glBindVertexArray(vertexAtt.arrayObject);
 

@@ -1,132 +1,76 @@
 #include <SDL.h>
 #include <glad/glad.h>
 
+#include <cassert>
 #include <iostream>
 
 #include "glm/vec3.hpp"
+#include "glm/mat4x4.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 #include "types.h"
+#include "util.h"
+
+#include "platform.h"
+#include "gl_structs.h"
+#include "gl_util.h"
+#include "graphics_util.h"
+#include "shader_program.h"
 #include "cube.h"
 
 #define INIT_WINDOW_WIDTH 640
 #define INIT_WINDOW_HEIGHT 480
-
-enum InputType {
-  UP = 1 << 0,
-  DOWN = 1 << 1,
-  LEFT = 1 << 2,
-  RIGHT = 1 << 3
-};
-
-struct InputState {
-  b32 down;
-  b32 activated;
-  b32 released;
-  bool quit;
-};
-
-void setFlags(b32* outFlags, b32 newFlags) { *outFlags |= newFlags; }
-
-void removeFlags(b32* outFlags, b32 removeFlags) { *outFlags &= ~removeFlags; }
-
-void getKeyboardInput(InputState* prevState) {
-  prevState->activated = 0;
-  prevState->released = 0;
-
-  SDL_Event event;
-  while( SDL_PollEvent( &event ) ){
-    /* We are only worried about SDL_KEYDOWN and SDL_KEYUP events */
-    switch( event.type ){
-      case SDL_KEYDOWN:
-        switch( event.key.keysym.sym ){
-          case SDLK_LEFT:
-            setFlags(&prevState->activated, InputType::LEFT);
-            break;
-          case SDLK_RIGHT:
-            setFlags(&prevState->activated, InputType::RIGHT);
-            break;
-          case SDLK_UP:
-            setFlags(&prevState->activated, InputType::UP);
-            break;
-          case SDLK_DOWN:
-            setFlags(&prevState->activated, InputType::DOWN);
-            break;
-          default:
-            break;
-        }
-        break;
-      case SDL_KEYUP:
-        switch( event.key.keysym.sym ){
-          case SDLK_LEFT:
-            setFlags(&prevState->released, InputType::LEFT);
-            break;
-          case SDLK_RIGHT:
-            setFlags(&prevState->released, InputType::RIGHT);
-            break;
-          case SDLK_UP:
-            setFlags(&prevState->released, InputType::UP);
-            break;
-          case SDLK_DOWN:
-            setFlags(&prevState->released, InputType::DOWN);
-            break;
-          case SDLK_ESCAPE:
-            prevState->quit = true;
-            break;
-          default:
-            break;
-        }
-        break;
-      case SDL_QUIT:
-        prevState->quit = true;
-        break;
-      default:
-        break;
-    }
-  }
-
-  setFlags(&prevState->down, prevState->activated);
-  removeFlags(&prevState->down, prevState->released);
-}
-
+#define INIT_ASPECT (f32)INIT_WINDOW_WIDTH / INIT_WINDOW_HEIGHT
 
 int main(int argc, char* argv[]) {
-  glm::vec3 screenColor = glm::vec3{0.5f, 0.0f, 0.0f};
+  WINDOW_HANDLE window = initWindow(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT);
+  loadOpenGL();
 
-  SDL_Init(SDL_INIT_VIDEO);
-  SDL_Window* window = SDL_CreateWindow(
-          "bootstrap",
-          SDL_WINDOWPOS_UNDEFINED,
-          SDL_WINDOWPOS_UNDEFINED,
-          INIT_WINDOW_WIDTH,
-          INIT_WINDOW_HEIGHT,
-          SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-  );
-  SDL_CaptureMouse(SDL_TRUE);
-  SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
-
-  SDL_GLContext context = SDL_GL_CreateContext(window);
-  SDL_GL_MakeCurrent(window, context);
-
-  // initialize GLAD to acquire function pointers for OpenGL
-  if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
-  {
-    std::cout << "Failed to initialize GLAD!" << std::endl;
-    exit(-1);
-  }
+  const glm::vec3 worldUp = glm::vec3{0.0f, 1.0f, 0.0f};
 
   VertexAtt cubeVertAtt = initCubePosVertexAttBuffers();
+  glm::vec3 cubeColor = glm::vec3(1.0f, 1.0f, 1.0f);
+  glm::vec3 cubePosition = glm::vec3{0.0f, 0.0f, 0.0f};
+  glm::vec3 cubeScale = glm::vec3(1.5f);
+  glm::vec3 cubeInitRotationAxis = glm::vec3(1.0f, 1.0f, 1.0f);
+  glm::vec3 cubeActiveRotationAxis = worldUp;
+  f32 cubeActiveRotationPerSecond = 20.0f * RadiansPerDegree;
+  glm::mat4 cubeScaleRotationMat = glm::rotate(glm::scale(glm::mat4(), cubeScale), 45.0f * RadiansPerDegree, cubeInitRotationAxis);
+  glm::mat4 cubeTranslationMat = glm::translate(glm::mat4(), cubePosition);
+
+  glm::vec3 clearColor = glm::vec3{0.5f, 0.0f, 0.0f};
+  glm::vec3 cameraPosition = glm::vec3{0.0f, 0.0f, -5.0f};
+  glm::mat4 viewMat = glm::lookAt(cameraPosition, cubePosition, worldUp);
+  glm::mat4 projMat = glm::perspective(fieldOfView(13.5f, 25.0f), INIT_ASPECT, 0.01f, 100.0f);
+
+  ShaderProgram shaderProgram = createShaderProgram("shaders/pos.vert", "shaders/single_color.frag");
+  glUseProgram(shaderProgram.id);
+  setUniform(shaderProgram.id, "singleColor", cubeColor);
+  setUniform(shaderProgram.id, "view", viewMat);
+  setUniform(shaderProgram.id, "projection", projMat);
+
+  glBindVertexArray(cubeVertAtt.arrayObject);
+
   InputState inputState = {};
   while(!inputState.quit) {
     getKeyboardInput(&inputState);
 
-    glClearColor(screenColor.r, screenColor.g, screenColor.b, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT );
+    glClearColor(clearColor.r, clearColor.g, clearColor.b, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-    SDL_GL_SwapWindow(window);
+    glm::mat4 cubeFrameScaleRotationMat = glm::rotate(cubeScaleRotationMat, static_cast<f32>(cubeActiveRotationPerSecond * getElapsedTime()), cubeActiveRotationAxis);
+    setUniform(shaderProgram.id, "model", cubeTranslationMat * cubeFrameScaleRotationMat);
+
+    glDrawElements(GL_TRIANGLES, // drawing mode
+                   cubeVertAtt.indexCount, // number of elements
+                   glSizeInBytes(cubeVertAtt.indexTypeSizeInBytes), // type of the indices
+                   0); // offset in the EBO
+
+    swapBuffers(window);
   }
 
-  SDL_DestroyWindow(window);
-  SDL_Quit();
+  deinitWindow(window);
 
   return 0;
 }
