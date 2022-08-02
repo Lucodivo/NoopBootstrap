@@ -1,5 +1,8 @@
 #include <SDL.h>
 #include <glad/glad.h>
+#include <imgui.h>
+#include <imgui_impl_sdl.h>
+#include <imgui_impl_opengl3.h>
 
 #include <cassert>
 #include <iostream>
@@ -24,8 +27,11 @@
 #define INIT_ASPECT (f32)INIT_WINDOW_WIDTH / INIT_WINDOW_HEIGHT
 
 int main(int argc, char* argv[]) {
-  WINDOW_HANDLE window = initWindow(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT);
+  WINDOW_HANDLE windowHandle;
+  GL_CONTEXT_HANDLE glContextHandle;
+  initWindow(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT, &windowHandle, &glContextHandle);
   loadOpenGL();
+  initImgui(windowHandle, glContextHandle);
 
   const glm::vec3 worldUp = glm::vec3{0.0f, 1.0f, 0.0f};
 
@@ -53,8 +59,25 @@ int main(int argc, char* argv[]) {
   glBindVertexArray(cubeVertAtt.arrayObject);
 
   InputState inputState = {};
+  bool showDemoWindow = true;
   while(!inputState.quit) {
     getKeyboardInput(&inputState);
+
+    newFrameImGui();
+    if (ImGui::BeginMainMenuBar())
+    {
+      if (ImGui::BeginMenu("View"))
+      {
+        if (ImGui::MenuItem("Demo Window ", NULL)) {
+          showDemoWindow = !showDemoWindow;
+        }
+        ImGui::EndMenu();
+      }
+      ImGui::EndMainMenuBar();
+    }
+    if(showDemoWindow) {
+      ImGui::ShowDemoWindow(&showDemoWindow);
+    }
 
     glClearColor(clearColor.r, clearColor.g, clearColor.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -67,10 +90,12 @@ int main(int argc, char* argv[]) {
                    glSizeInBytes(cubeVertAtt.indexTypeSizeInBytes), // type of the indices
                    0); // offset in the EBO
 
-    swapBuffers(window);
+    renderImGui();
+
+    swapBuffers(windowHandle);
   }
 
-  deinitWindow(window);
+  deinitWindow(windowHandle);
 
   return 0;
 }

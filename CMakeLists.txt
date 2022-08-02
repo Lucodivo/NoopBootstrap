@@ -15,6 +15,14 @@ find_library(
         REQUIRED
 )
 
+# glad
+find_library(
+        imgui
+        NAMES imgui
+        HINTS ${ARCHIVE_LIB_HINTS}
+        REQUIRED
+)
+
 #SDL2
 find_library(
         sdl2-lib
@@ -34,7 +42,7 @@ target_link_libraries(sdl2 INTERFACE ${sdl2-lib} ${sdl2main-lib})
 target_include_directories(sdl2 INTERFACE ${EXT_DIR}/sdl2/include)
 target_link_directories(sdl2 INTERFACE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 
-set(INCLUDE_DIRS ${EXT_DIR} ${EXT_DIR}/glm ${EXT_DIR}/sdl2/include ${EXT_DIR}/glad)
+set(INCLUDE_DIRS ${EXT_DIR} ${EXT_DIR}/glm ${EXT_DIR}/sdl2/include ${EXT_DIR}/glad ${EXT_DIR}/imgui ${EXT_DIR}/imgui/backends)
 include_directories(${INCLUDE_DIRS})
 
 add_subdirectory(src)

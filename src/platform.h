@@ -2,6 +2,7 @@
 
 typedef void* WINDOW_HANDLE;
 typedef void* FILE_HANDLE;
+typedef void* GL_CONTEXT_HANDLE;
 
 enum InputType {
   UP = 1 << 0,
@@ -27,7 +28,7 @@ void loadOpenGL() {
 }
 
 /* INPUT */
-WINDOW_HANDLE initWindow(u32 width, u32 height) {
+void initWindow(u32 width, u32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_HANDLE* glContextHandle) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_Window* window = SDL_CreateWindow(
           "bootstrap",
@@ -43,7 +44,8 @@ WINDOW_HANDLE initWindow(u32 width, u32 height) {
   SDL_GLContext context = SDL_GL_CreateContext(window);
   SDL_GL_MakeCurrent(window, context);
 
-  return window;
+  *windowHandle = window;
+  *glContextHandle = context;
 }
 
 void deinitWindow(WINDOW_HANDLE window) {
@@ -62,6 +64,8 @@ void getKeyboardInput(InputState* prevState) {
 
   SDL_Event event;
   while( SDL_PollEvent( &event ) ){
+    ImGui_ImplSDL2_ProcessEvent(&event);
+
     /* We are only worried about SDL_KEYDOWN and SDL_KEYUP events */
     switch( event.type ){
       case SDL_KEYDOWN:
@@ -132,4 +136,32 @@ void closeFile(FILE_HANDLE file) {
 /* TIME */
 f64 getElapsedTime() {
   return SDL_GetTicks() / 1000.0; // ticks are in milliseconds
+}
+
+/* IMGUI */
+void initImgui(WINDOW_HANDLE windowHandle, GL_CONTEXT_HANDLE glContextHandle) {
+  // Setup Dear ImGui context
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO& io = ImGui::GetIO(); (void)io;
+  //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+  //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+  // Setup Dear ImGui style
+  ImGui::StyleColorsDark();
+
+  // Setup Platform/Renderer bindings
+  ImGui_ImplSDL2_InitForOpenGL((SDL_Window*)windowHandle, (SDL_GLContext*)glContextHandle);
+  ImGui_ImplOpenGL3_Init(NULL);
+}
+
+void newFrameImGui() {
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplSDL2_NewFrame();
+  ImGui::NewFrame();
+}
+
+void renderImGui() {
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
