@@ -24,13 +24,11 @@
 #include "glm/vec3.hpp"
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
 
 #include "types.h"
-#include "math_structs.h"
-#include "util.h"
-
 #include "platform.h"
+#include "util.h"
+#include "platform.cpp"
 #include "gl_structs.h"
 #include "gl_util.h"
 #include "graphics_util.h"
@@ -83,9 +81,9 @@ void scene(WINDOW_HANDLE windowHandle) {
   f32 qScale = 0.2f;
   glm::vec3 quadScale = glm::vec3(qScale);
   glm::mat4 quadScaleMat = glm::scale(glm::mat4(), quadScale);
-  glm::mat4 quadTranslationMat = glm::translate(glm::mat4(), quadPosition);
 
-  glm::vec3 clearColor = glm::vec3{0.8f, 0.8f, 0.8f};
+  f32 clearGrayScale = 0.7f;
+  glm::vec3 clearColor = glm::vec3(clearGrayScale);
   glm::vec3 cameraPosition = glm::vec3{0.0f, 0.0f, -5.0f};
   glm::mat4 viewMat = glm::lookAt(cameraPosition, glm::vec3(0.0f), worldUp);
   glm::mat4 projMat = glm::perspective(fieldOfView(13.5f, 25.0f), INIT_ASPECT, 0.01f, 100.0f);
@@ -116,29 +114,24 @@ void scene(WINDOW_HANDLE windowHandle) {
 
   InputState inputState = {};
   bool showDemoWindow = false;
+  StopWatch stopWatch = StopWatch();
   while(!inputState.quit) {
+    stopWatch.update();
     getKeyboardInput(&inputState);
 
-    newFrameImGui();
-    if (ImGui::BeginMainMenuBar())
-    {
-      if (ImGui::BeginMenu("View"))
-      {
-        if (ImGui::MenuItem("Demo Window ", NULL)) {
-          showDemoWindow = !showDemoWindow;
-        }
-        ImGui::EndMenu();
-      }
-      ImGui::EndMainMenuBar();
-    }
-    if(showDemoWindow) {
-      ImGui::ShowDemoWindow(&showDemoWindow);
-    }
+    const f32 quadWalkMoveSpeedPerSecond = 0.3f;
+    const f32 quadRunMoveSpeedPerSecond = quadWalkMoveSpeedPerSecond * 3.0f;
+    const f32 quadMoveSpeedPerSecond = flagIsSet(inputState.down, InputType::SHIFT) ? quadRunMoveSpeedPerSecond : quadWalkMoveSpeedPerSecond;
+    glm::vec3 quadDelta = glm::vec3(
+            stopWatch.deltaSeconds * quadMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::RIGHT) - flagIsSet(inputState.down, InputType::LEFT)),
+            stopWatch.deltaSeconds * quadMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::UP) - flagIsSet(inputState.down, InputType::DOWN)),
+            0.0f
+            );
 
     glClearColor(clearColor.r, clearColor.g, clearColor.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glm::mat4 cubeFrameModelMat = cubeTranslationMat * glm::rotate(cubeScaleRotationMat, static_cast<f32>(cubeActiveRotationPerSecond * getElapsedTime()), cubeActiveRotationAxis);
+    glm::mat4 cubeFrameModelMat = cubeTranslationMat * glm::rotate(cubeScaleRotationMat, static_cast<f32>(cubeActiveRotationPerSecond * getTimeSeconds()), cubeActiveRotationAxis);
 
     glBindBuffer(GL_UNIFORM_BUFFER, modelViewProjUboId);
     glBufferSubData(GL_UNIFORM_BUFFER, offsetof(ModelViewProjUBO, model), sizeof(glm::mat4), &cubeFrameModelMat);
@@ -149,6 +142,8 @@ void scene(WINDOW_HANDLE windowHandle) {
     drawTriangles(cubeVertAtt);
     glEnable(GL_CULL_FACE);
 
+    quadPosition += quadDelta;
+    glm::mat4 quadTranslationMat = glm::translate(glm::mat4(), quadPosition);
     glm::mat4 quadFrameModelMat = quadTranslationMat * quadScaleMat;
 
     glBufferSubData(GL_UNIFORM_BUFFER, offsetof(ModelViewProjUBO, model), sizeof(glm::mat4), &quadFrameModelMat);
@@ -156,6 +151,24 @@ void scene(WINDOW_HANDLE windowHandle) {
     bindActiveTexture2d(0, birdTexture);
     drawModel(quadModel);
 
+    // Imgui Main Menu
+    newFrameImGui();
+    {
+      if (ImGui::BeginMainMenuBar())
+      {
+        if (ImGui::BeginMenu("View"))
+        {
+          if (ImGui::MenuItem("Demo Window ", NULL)) {
+            showDemoWindow = !showDemoWindow;
+          }
+          ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+      }
+      if(showDemoWindow) {
+        ImGui::ShowDemoWindow(&showDemoWindow);
+      }
+    }
     renderImGui();
 
     swapBuffers(windowHandle);

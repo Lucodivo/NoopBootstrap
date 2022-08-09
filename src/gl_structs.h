@@ -41,8 +41,3 @@ struct ModelViewProjUBO {  // base alignment   // aligned offset
   glm::mat4 view;          // 16                // 64
   glm::mat4 proj;          // 16                // 128
 };
-
-u32 fragUBOBindingIndex = 1;
-struct FragUBO {
-  f32 time;
-};
