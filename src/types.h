@@ -36,3 +36,6 @@ typedef size_t memory_index;
 #define Megabytes(Value) (Kilobytes(Value)*1024LL)
 #define Gigabytes(Value) (Megabytes(Value)*1024LL)
 #define Terabytes(Value) (Gigabytes(Value)*1024LL)
+
+#define Min(x, y) (x <= y ? x : y)
+#define Max(x, y) (x >= y ? x : y)

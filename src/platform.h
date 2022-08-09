@@ -27,7 +27,7 @@ void loadOpenGL() {
   }
 }
 
-/* INPUT */
+/* Window */
 void initWindow(u32 width, u32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_HANDLE* glContextHandle) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_Window* window = SDL_CreateWindow(
@@ -55,6 +55,11 @@ void deinitWindow(WINDOW_HANDLE window) {
 
 inline void swapBuffers(WINDOW_HANDLE window) {
   SDL_GL_SwapWindow((SDL_Window*)window);
+}
+
+void windowExtent(WINDOW_HANDLE window, s32* width, s32* height) {
+  SDL_GetWindowSize((SDL_Window*)window, width, height);
+  assert(*width >= 0 && *height >= 0);
 }
 
 /* INPUT */
