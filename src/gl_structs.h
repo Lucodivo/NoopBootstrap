@@ -8,7 +8,7 @@ struct VertexAtt {
   GLuint arrayObject;
   GLuint bufferObject;
   GLuint indexObject;
-  u32 indexCount;
+  GLsizei indexCount;
   u32 indexTypeSizeInBytes;
 };
 

@@ -13,7 +13,7 @@ void load2DTexture(const u8* data, u32 numChannels, s32 width, s32 height, GLuin
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   b32 chunkyPixels = flagIsSet(textureFlags, LoadTextureFlags::CHUNKY_PIXELS);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, chunkyPixels ? GL_NEAREST : GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, chunkyPixels ? GL_NEAREST : GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, chunkyPixels ? GL_NEAREST : GL_LINEAR_MIPMAP_NEAREST);
 
   u32 dataColorSpace;

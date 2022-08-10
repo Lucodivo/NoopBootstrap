@@ -1,9 +1,5 @@
 #pragma once
 
-void deleteVertexAtts(VertexAtt* vertexAtts, u32 count);
-void drawTriangles(const VertexAtt& vertexAtt, u32 count, u32 offset);
-void drawTriangles(const VertexAtt& vertexAtt);
-
 void initializeModelVertexData(tinygltf::Model* gltfModel, Model* model)
 {
   struct gltfAttributeMetadata {
@@ -206,36 +202,6 @@ void loadModel(const char* filePath, Model* returnModel) {
   initializeModelVertexData(&tinyGLTFModel, returnModel);
 }
 
-void loadModels(const char** filePaths, u32 count, Model** returnModels) {
-  tinygltf::TinyGLTF loader;
-
-  for(u32 i = 0; i < count; i++) {
-    std::string err;
-    std::string warn;
-    tinygltf::Model tinyGLTFModel;
-
-    bool ret = loader.LoadBinaryFromFile(&tinyGLTFModel, &err, &warn, filePaths[i]); // for binary glTF(.glb)
-
-    if (!warn.empty()) {
-      printf("Warn: %s\n", warn.c_str());
-      return;
-    }
-
-    if (!err.empty()) {
-      printf("Err: %s\n", err.c_str());
-      return;
-    }
-
-    if (!ret) {
-      printf("Failed to parse glTF\n");
-      return;
-    }
-
-    returnModels[i]->fileName = filePaths[i];
-    initializeModelVertexData(&tinyGLTFModel, returnModels[i]);
-  }
-}
-
 void drawModel(const Model& model) {
   for(u32 i = 0; i < model.meshCount; ++i) {
     Mesh* meshPtr = model.meshes + i;
@@ -266,45 +232,6 @@ void deleteModels(Model* models, u32 count) {
 
   deleteVertexAtts(vertexAtts.data(), (u32)vertexAtts.size());
   glDeleteTextures((GLsizei)textureData.size(), textureData.data());
-}
-
-internal void drawIndexedTriangles(const VertexAtt& vertexAtt, u32 indexCount, u64 indexOffset)
-{
-  glBindVertexArray(vertexAtt.arrayObject); // NOTE: Binding every time is unnecessary if the same vertexAtt is used for multiple calls in a row
-  glDrawElements(GL_TRIANGLES, // drawing mode
-                 indexCount, // number of elements
-                 glSizeInBytes(vertexAtt.indexTypeSizeInBytes), // type of the indices
-                 (void*)(indexOffset * vertexAtt.indexTypeSizeInBytes)); // offset in the EBO
-}
-
-void drawTriangles(const VertexAtt& vertexAtt, u32 count, u32 offset)
-{
-  assert(vertexAtt.indexCount >= (offset + count));
-  drawIndexedTriangles(vertexAtt, count, offset);
-}
-
-void drawTriangles(const VertexAtt& vertexAtt)
-{
-  drawTriangles(vertexAtt, vertexAtt.indexCount, 0);
-}
-
-
-void deleteVertexAtts(VertexAtt* vertexAtts, u32 count)
-{
-  u32* deleteBufferObjects = new u32[count * 3];
-  u32* deleteIndexBufferObjects = deleteBufferObjects + count;
-  u32* deleteVertexArrays = deleteIndexBufferObjects + count;
-  for(u32 i = 0; i < count; i++) {
-    VertexAtt vertexAtt = vertexAtts[i];
-    deleteBufferObjects[i] = vertexAtt.bufferObject;
-    deleteIndexBufferObjects[i] = vertexAtt.indexObject;
-    deleteVertexArrays[i] = vertexAtt.arrayObject;
-  }
-
-  glDeleteBuffers(count * 2, deleteBufferObjects);
-  glDeleteVertexArrays(count, deleteVertexArrays);
-
-  delete[] deleteBufferObjects;
 }
 
 b32 baseColorValid(const Mesh& mesh) {
