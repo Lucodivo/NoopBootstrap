@@ -53,9 +53,9 @@ void scene(WINDOW_HANDLE windowHandle) {
   windowExtent(windowHandle, &windowWidth, &windowHeight);
 
   GLuint spiritTexture, birdTexture;
-  u32 spiritTexWidth, spiritTexHeight, birdTexWidth, birdTexHeight;
-  load2DTexture("data/textures/seed_spirit.png", &spiritTexture, &spiritTexWidth, &spiritTexHeight);
-  load2DTexture("data/textures/bird_guy.png", &birdTexture, &birdTexWidth, &birdTexHeight);
+  s32 spiritTexWidth, spiritTexHeight, birdTexWidth, birdTexHeight;
+  load2DTexture("data/textures/seed_spirit.png", &spiritTexture, &spiritTexWidth, &spiritTexHeight, LoadTextureFlags::CHUNKY_PIXELS);
+  load2DTexture("data/textures/bird_guy.png", &birdTexture, &birdTexWidth, &birdTexHeight, LoadTextureFlags::CHUNKY_PIXELS);
 
   VertexAtt cubeVertAtt = initializeCubePosNormTexVertexAttBuffers();
   glm::vec3 cubePosition = glm::vec3{0.0f, 0.0f, 0.0f};

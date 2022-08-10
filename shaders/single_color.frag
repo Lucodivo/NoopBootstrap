@@ -10,6 +10,6 @@ out vec4 FragColor;
 void main()
 {
   vec4 albedoColor = texture(albedoTex, inTex);
-  if(albedoColor.a < 0.5) { discard; }
+  if(albedoColor.a < 0.1) { discard; }
   FragColor = albedoColor;
 }

@@ -4,64 +4,6 @@ void deleteVertexAtts(VertexAtt* vertexAtts, u32 count);
 void drawTriangles(const VertexAtt& vertexAtt, u32 count, u32 offset);
 void drawTriangles(const VertexAtt& vertexAtt);
 
-void loadModelTexture(u32* textureId, tinygltf::Image* image, b32 inputSRGB = false)
-{
-  glGenTextures(1, textureId);
-  glBindTexture(GL_TEXTURE_2D, *textureId);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  //glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); // disables bilinear filtering (creates sharp edges when magnifying texture)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-  u8* imageData = image->image.data();
-  u32 numComponents = image->component;
-
-  // load image data
-  if (!image->image.empty())
-  {
-    assert(numComponents > 0 && numComponents < 4);
-
-    u32 dataColorSpace;
-    u32 dataComponentComposition;
-    switch(numComponents) {
-      case 1:
-        dataColorSpace = dataComponentComposition = GL_RED;
-        break;
-      case 2:
-        dataColorSpace = dataComponentComposition = GL_RG;
-        break;
-      case 3:
-        dataColorSpace = inputSRGB ? GL_SRGB : GL_RGB;
-        dataComponentComposition = GL_RGB;
-        break;
-      case 4:
-        dataColorSpace = inputSRGB ? GL_SRGB_ALPHA : GL_RGBA;
-        dataComponentComposition = GL_RGBA;
-        break;
-    }
-
-    glTexImage2D(GL_TEXTURE_2D, // target
-                 0, // level of detail (level n is the nth mipmap reduction image)
-                 dataColorSpace, // What is the color space of the data
-                 image->width, // width of texture
-                 image->height, // height of texture
-                 0, // border (legacy stuff, MUST BE 0)
-                 dataComponentComposition, // How are the components of the data composed
-                 GL_UNSIGNED_BYTE, // specifies data type of pixel data
-                 imageData); // pointer to the image data
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    // set texture options
-  } else
-  {
-    std::cout << "Failed to load texture" << std::endl;
-  }
-
-  glBindTexture(GL_TEXTURE_2D, 0);
-}
-
 void initializeModelVertexData(tinygltf::Model* gltfModel, Model* model)
 {
   struct gltfAttributeMetadata {
@@ -215,7 +157,7 @@ void initializeModelVertexData(tinygltf::Model* gltfModel, Model* model)
       if(normalTextureIndex >= 0) {
         u32 normalImageIndex = gltfModel->textures[normalTextureIndex].source;
         tinygltf::Image normalImage = gltfModel->images[normalImageIndex];
-        loadModelTexture(&mesh->normalTextureId, &normalImage);
+        load2DTexture(normalImage.image.data(), normalImage.component, normalImage.width, normalImage.height, &mesh->normalTextureId);
       } else {
         mesh->normalTextureId = TEXTURE_ID_NO_TEXTURE;
       }
@@ -224,7 +166,7 @@ void initializeModelVertexData(tinygltf::Model* gltfModel, Model* model)
       if(baseColorTextureIndex >= 0) {
         u32 albedoColorImageIndex = gltfModel->textures[baseColorTextureIndex].source;
         tinygltf::Image albedoImage = gltfModel->images[albedoColorImageIndex];
-        loadModelTexture(&mesh->albedoTextureId, &albedoImage);
+        load2DTexture(albedoImage.image.data(), albedoImage.component, albedoImage.width, albedoImage.height, &mesh->albedoTextureId);
       } else {
         mesh->albedoTextureId = TEXTURE_ID_NO_TEXTURE;
       }
