@@ -59,7 +59,7 @@ void getKeyboardInput(InputState* prevState) {
         switch( event.key.keysym.sym ){
 #define InputType(name,index,sdlCode) \
           case sdlCode:               \
-            setFlags(&prevState->activated, name); \
+            setFlags(&prevState->activated, InputType::##name); \
             break;
 #include "InputType.incl"
 #undef InputType
@@ -71,7 +71,7 @@ void getKeyboardInput(InputState* prevState) {
         switch( event.key.keysym.sym ){
 #define InputType(name,index,sdlCode) \
           case sdlCode:               \
-            setFlags(&prevState->released, name); \
+            setFlags(&prevState->released, InputType::##name); \
             break;
 #include "InputType.incl"
 #undef InputType

@@ -14,6 +14,13 @@ add_subdirectory(sdl2)
 add_library(glad STATIC glad/glad.c)
 target_include_directories(glad PUBLIC ${EXT_DIR}/glad)
 
+# stb
+add_library(stb STATIC stb/stb.c stb/stb_image.h stb/stb_image_write.h)
+
+# tiny_gltf
+add_library(tinygltf STATIC tinygltf/tiny_gltf.cpp tinygltf/tiny_gltf.h)
+target_include_directories(tinygltf PUBLIC nlohmann/ stb/)
+
 # Imgui
 file(GLOB IMGUI_SOURCE_FILES ${EXT_DIR}/imgui/*.cpp ${EXT_DIR}/imgui/*.h
         ${EXT_DIR}/imgui/backends/imgui_impl_sdl.h ${EXT_DIR}/imgui/backends/imgui_impl_sdl.cpp
@@ -23,5 +30,5 @@ target_include_directories(imgui PUBLIC ${EXT_DIR}/imgui ${EXT_DIR}/sdl2/include
 
 add_custom_target(
         bootstrap_dependencies
-        DEPENDS SDL2 SDL2main glad imgui
+        DEPENDS SDL2 SDL2main glad imgui stb tinygltf
 )

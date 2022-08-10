@@ -11,35 +11,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
 set(ARCHIVE_LIB_HINTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/Debug ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/Release)
 set(EXT_DIR "${PROJECT_SOURCE_DIR}/external")
 
-# glad
-find_library(
-        glad
-        NAMES glad
-        HINTS ${ARCHIVE_LIB_HINTS}
-        REQUIRED
-)
-
-# glad
-find_library(
-        imgui
-        NAMES imgui
-        HINTS ${ARCHIVE_LIB_HINTS}
-        REQUIRED
-)
+find_library(glad NAMES glad HINTS ${ARCHIVE_LIB_HINTS} REQUIRED)
+find_library(imgui NAMES imgui HINTS ${ARCHIVE_LIB_HINTS} REQUIRED)
+find_library(stb NAMES stb HINTS ${ARCHIVE_LIB_HINTS} REQUIRED)
+find_library(tinygltf NAMES tinygltf HINTS ${ARCHIVE_LIB_HINTS} REQUIRED)
 
 #SDL2
-find_library(
-        sdl2-lib
-        NAMES SDL2 SDL2d
-        HINTS ${ARCHIVE_LIB_HINTS}
-        REQUIRED
-)
-find_library(
-        sdl2main-lib
-        NAMES SDL2main SDL2maind
-        HINTS ${ARCHIVE_LIB_HINTS}
-        REQUIRED
-)
+find_library(sdl2-lib NAMES SDL2 SDL2d HINTS ${ARCHIVE_LIB_HINTS} REQUIRED)
+find_library(sdl2main-lib NAMES SDL2main SDL2maind HINTS ${ARCHIVE_LIB_HINTS} REQUIRED)
 add_library(sdl2 INTERFACE)
 set(sdl2_DIR ${PROJECT_SOURCE_DIR}/bin/debug)
 target_link_libraries(sdl2 INTERFACE ${sdl2-lib} ${sdl2main-lib})

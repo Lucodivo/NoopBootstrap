@@ -4,17 +4,8 @@
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_opengl3.h>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
-#include "nlohmann/json.hpp"
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#define TINYGLTF_NO_INCLUDE_STB_IMAGE
-#define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
-#define TINYGLTF_NO_INCLUDE_JSON
-#define TINYGLTF_NOEXCEPTION
 #include "tinygltf/tiny_gltf.h"
 
 #include <cassert>
@@ -115,7 +106,7 @@ void scene(WINDOW_HANDLE windowHandle) {
   InputState inputState = {};
   bool showDemoWindow = false;
   StopWatch stopWatch = StopWatch();
-  while(!inputState.quit && !flagIsSet(inputState.released, ESC)) {
+  while(!inputState.quit && !flagIsSet(inputState.released, InputType::ESC)) {
     stopWatch.update();
     getKeyboardInput(&inputState);
 
