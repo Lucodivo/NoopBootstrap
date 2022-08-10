@@ -57,45 +57,24 @@ void getKeyboardInput(InputState* prevState) {
     switch( event.type ){
       case SDL_KEYDOWN:
         switch( event.key.keysym.sym ){
-          case SDLK_LEFT:
-            setFlags(&prevState->activated, InputType::LEFT);
+#define InputType(name,index,sdlCode) \
+          case sdlCode:               \
+            setFlags(&prevState->activated, name); \
             break;
-          case SDLK_RIGHT:
-            setFlags(&prevState->activated, InputType::RIGHT);
-            break;
-          case SDLK_UP:
-            setFlags(&prevState->activated, InputType::UP);
-            break;
-          case SDLK_DOWN:
-            setFlags(&prevState->activated, InputType::DOWN);
-            break;
-          case SDLK_LSHIFT:
-            setFlags(&prevState->activated, InputType::SHIFT);
-            break;
+#include "InputType.incl"
+#undef InputType
           default:
             break;
         }
         break;
       case SDL_KEYUP:
         switch( event.key.keysym.sym ){
-          case SDLK_LEFT:
-            setFlags(&prevState->released, InputType::LEFT);
+#define InputType(name,index,sdlCode) \
+          case sdlCode:               \
+            setFlags(&prevState->released, name); \
             break;
-          case SDLK_RIGHT:
-            setFlags(&prevState->released, InputType::RIGHT);
-            break;
-          case SDLK_UP:
-            setFlags(&prevState->released, InputType::UP);
-            break;
-          case SDLK_DOWN:
-            setFlags(&prevState->released, InputType::DOWN);
-            break;
-          case SDLK_LSHIFT:
-            setFlags(&prevState->released, InputType::SHIFT);
-            break;
-          case SDLK_ESCAPE:
-            prevState->quit = true;
-            break;
+#include "InputType.incl"
+#undef InputType
           default:
             break;
         }

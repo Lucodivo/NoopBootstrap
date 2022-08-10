@@ -115,7 +115,7 @@ void scene(WINDOW_HANDLE windowHandle) {
   InputState inputState = {};
   bool showDemoWindow = false;
   StopWatch stopWatch = StopWatch();
-  while(!inputState.quit) {
+  while(!inputState.quit && !flagIsSet(inputState.released, ESC)) {
     stopWatch.update();
     getKeyboardInput(&inputState);
 

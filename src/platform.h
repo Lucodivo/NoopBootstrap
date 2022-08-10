@@ -5,11 +5,9 @@ typedef void* FILE_HANDLE;
 typedef void* GL_CONTEXT_HANDLE;
 
 enum InputType {
-  UP = 1 << 0,
-  DOWN = 1 << 1,
-  LEFT = 1 << 2,
-  RIGHT = 1 << 3,
-  SHIFT = 1 << 4
+#define InputType(name,index,sdlCode) name = 1 << index,
+#include "InputType.incl"
+#undef InputType
 };
 
 struct InputState {

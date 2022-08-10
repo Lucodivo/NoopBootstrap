@@ -1,0 +1,7 @@
+// InputType(enum name, index, SDL2 code)
+InputType(UP,0,SDLK_UP)
+InputType(DOWN,1,SDLK_DOWN)
+InputType(LEFT,2,SDLK_LEFT)
+InputType(RIGHT,3,SDLK_RIGHT)
+InputType(SHIFT,4,SDLK_LSHIFT)
+InputType(ESC,5,SDLK_ESCAPE)
