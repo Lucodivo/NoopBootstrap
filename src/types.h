@@ -30,6 +30,7 @@ typedef size_t memory_index;
 #define PiOverTwo32 1.57079632679f
 #define Tau32 6.28318530717958647692f
 #define RadiansPerDegree (Pi32 / 180.0f)
+#define Radians(x) (x * RadiansPerDegree)
 #define U32_MAX ~0u
 
 #define Kilobytes(Value) ((Value)*1024LL)
@@ -39,3 +40,4 @@ typedef size_t memory_index;
 
 #define Min(x, y) (x <= y ? x : y)
 #define Max(x, y) (x >= y ? x : y)
+#define Clamp(x, low, high) (x <= low ? low : (x >= high) ? high : x)

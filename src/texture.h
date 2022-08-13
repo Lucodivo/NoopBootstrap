@@ -16,6 +16,8 @@ void load2DTexture(const u8* data, u32 numChannels, s32 width, s32 height, GLuin
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, chunkyPixels ? GL_NEAREST : GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, chunkyPixels ? GL_NEAREST : GL_LINEAR_MIPMAP_NEAREST);
 
+  assert(numChannels > 0 && numChannels <= 4);
+
   u32 dataColorSpace;
   u32 dataComponentComposition;
   switch(numChannels) {
@@ -56,7 +58,6 @@ void load2DTexture(const char* imgLocation, GLuint* textureId, s32* width, s32* 
   u8* data = stbi_load(imgLocation, width, height, &numChannels, 0 /*desired channels*/);
 
   assert(data);
-  assert(numChannels > 0 && numChannels <= 4);
 
   load2DTexture(data, numChannels, *width, *height, textureId, textureFlags);
 

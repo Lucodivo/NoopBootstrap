@@ -209,7 +209,7 @@ void drawModel(const Model& model) {
   }
 }
 
-void deleteModels(Model* models, u32 count) {
+void deleteModels(Model* models, u32 count = 1) {
   std::vector<VertexAtt> vertexAtts;
   std::vector<GLuint> textureData;
 
@@ -226,14 +226,9 @@ void deleteModels(Model* models, u32 count) {
       }
     }
     delete[] modelPtr->meshes;
-    delete[] modelPtr->fileName;
     *modelPtr = {}; // clear model to zero
   }
 
   deleteVertexAtts(vertexAtts.data(), (u32)vertexAtts.size());
   glDeleteTextures((GLsizei)textureData.size(), textureData.data());
-}
-
-b32 baseColorValid(const Mesh& mesh) {
-  return mesh.baseColor.w != 0.0f;
 }

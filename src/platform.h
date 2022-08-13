@@ -14,6 +14,8 @@ struct InputState {
   b32 down;
   b32 activated;
   b32 released;
+  s32 mouseDeltaX;
+  s32 mouseDeltaY;
   bool quit;
 };
 

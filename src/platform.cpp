@@ -48,6 +48,8 @@ void windowExtent(WINDOW_HANDLE window, s32* width, s32* height) {
 void getKeyboardInput(InputState* prevState) {
   prevState->activated = 0;
   prevState->released = 0;
+  prevState->mouseDeltaX = 0;
+  prevState->mouseDeltaY = 0;
 
   SDL_Event event;
   while( SDL_PollEvent( &event ) ){
@@ -81,6 +83,10 @@ void getKeyboardInput(InputState* prevState) {
         break;
       case SDL_QUIT:
         prevState->quit = true;
+        break;
+      case SDL_MOUSEMOTION:
+        prevState->mouseDeltaX += event.motion.xrel;
+        prevState->mouseDeltaY += event.motion.yrel;
         break;
       default:
         break;
