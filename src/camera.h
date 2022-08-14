@@ -1,8 +1,8 @@
 #pragma once
 
-const glm::vec3 defaultUp{0.0f, 1.0f, 0.0f};
-const f32 maxPitchFirstPerson = Radians(85.0f);
-const f32 minPitchFirstPerson = Radians(-85.0f);
+const glm::vec3 worldUp{0.0f, 1.0f, 0.0f};
+const f32 maxPitchFirstPerson = sin(Radians(85.0f));
+const f32 minPitchFirstPerson = sin(Radians(-85.0f));
 
 struct Camera {
   glm::vec3 origin;
@@ -14,13 +14,21 @@ struct Camera {
 void lookAt(glm::vec3 origin, glm::vec3 focus, Camera* camera) {
   camera->origin = origin;
   camera->forward = normalize(focus - origin);
-  assert(camera->forward.y < cos(Radians(5.0f)) && camera->forward.y > cos(Radians(175.0f)));
-  camera->right = normalize(cross(defaultUp, camera->forward));
+  assert(camera->forward.y < maxPitchFirstPerson && camera->forward.y > minPitchFirstPerson);
+  camera->right = normalize(cross(worldUp, camera->forward));
   camera->up = cross(camera->forward, camera->right);
 }
 
 glm::mat4 updateCamera(Camera* camera, glm::vec3 posOffset, f32 pitchOffset, f32 yawOffset) {
   camera->origin += posOffset;
+
+  f32 desiredPitch = Clamp(camera->forward.y + pitchOffset, minPitchFirstPerson, maxPitchFirstPerson);
+  glm::vec2 forwardXZ = glm::rotate(glm::normalize(glm::vec2(camera->forward.x, camera->forward.z)), yawOffset) * sqrt(1.0f - (desiredPitch * desiredPitch));
+  camera->forward.x = forwardXZ[0];
+  camera->forward.y = desiredPitch;
+  camera->forward.z = forwardXZ[1];
+  camera->right = normalize(cross(worldUp, camera->forward));
+  camera->up = cross(camera->forward, camera->right);
 
   glm::mat4 translation{
           1.0f,             0.0f,       0.0f,       0.0f,

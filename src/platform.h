@@ -15,7 +15,7 @@ struct InputState {
   b32 activated;
   b32 released;
   s32 mouseDeltaX;
-  s32 mouseDeltaY;
+  s32 mouseDeltaY; // positive is up, negative is down
   bool quit;
 };
 

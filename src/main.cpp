@@ -1,7 +1,7 @@
 #include "main.h"
 
-#define INIT_WINDOW_WIDTH 640
-#define INIT_WINDOW_HEIGHT 480
+#define INIT_WINDOW_WIDTH 1920
+#define INIT_WINDOW_HEIGHT 1080
 #define INIT_ASPECT (f32)INIT_WINDOW_WIDTH / INIT_WINDOW_HEIGHT
 
 void scene(WINDOW_HANDLE windowHandle);
@@ -23,6 +23,9 @@ void scene(WINDOW_HANDLE windowHandle) {
 
   s32 windowWidth, windowHeight;
   windowExtent(windowHandle, &windowWidth, &windowHeight);
+
+  bool hiddenMouse = true;
+  hideMouse(hiddenMouse);
 
   // load 2d textures
   GLuint spiritTexture, birdTexture;
@@ -88,29 +91,39 @@ void scene(WINDOW_HANDLE windowHandle) {
   bindActiveTexture2d(spiritTexIndex, spiritTexture);
   bindActiveTexture2d(birdTexIndex, birdTexture);
 
-  const f32 cameraWalkMoveSpeedPerSecond = 0.3f;
-  const f32 cameraRunMoveSpeedPerSecond = cameraWalkMoveSpeedPerSecond * 2.0f;
-  const f32 cameraPitchRotationSpeedPerSecond = 0.01f;
+  const f32 cameraWalkMoveSpeedPerSecond = 0.8f;
+  const f32 cameraRunMoveSpeedPerSecond = cameraWalkMoveSpeedPerSecond * 3.0f;
+  const f32 cameraPitchRotationSpeedPerSecond = 0.04f;
+  const f32 cameraYawRotationSpeedPerSecond = 0.04f;
   const f32 quadWalkMoveSpeedPerSecond = 0.3f;
   const f32 quadRunMoveSpeedPerSecond = quadWalkMoveSpeedPerSecond * 3.0f;
 
   InputState inputState = {};
-  bool showDemoWindow = false;
+  bool showDemoWindow = false, showFPS = true;
+  RingSampler fpsSampler = RingSampler();
   StopWatch stopWatch = StopWatch();
   while(!inputState.quit && !flagIsSet(inputState.released, InputType::ESC)) {
     stopWatch.update();
     getKeyboardInput(&inputState);
 
+    if(flagIsSet(inputState.released, InputType::TAB)) {
+      hiddenMouse = !hiddenMouse;
+      hideMouse(hiddenMouse);
+    }
+
     // Update camera
     const f32 cameraMoveSpeedPerSecond = flagIsSet(inputState.down, InputType::SHIFT) ? cameraRunMoveSpeedPerSecond : cameraWalkMoveSpeedPerSecond;
+    f32 forwardDeltaUnits = static_cast<f32>(stopWatch.deltaSeconds * cameraMoveSpeedPerSecond * (flagIsSet(inputState.down, InputType::W) - flagIsSet(inputState.down, InputType::S)));
+    f32 rightDeltaUnits = static_cast<f32>(stopWatch.deltaSeconds * cameraMoveSpeedPerSecond * (flagIsSet(inputState.down, InputType::D) - flagIsSet(inputState.down, InputType::A)));
     glm::vec3 cameraPosDelta = glm::vec3(
-            stopWatch.deltaSeconds * cameraMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::D) - flagIsSet(inputState.down, InputType::A)),
+            forwardDeltaUnits * camera.forward.x + rightDeltaUnits * camera.right.x,
             0.0f,
-            stopWatch.deltaSeconds * cameraMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::W) - flagIsSet(inputState.down, InputType::S))
+            forwardDeltaUnits * camera.forward.z + rightDeltaUnits * camera.right.z
             );
-    cameraPosition += cameraPosDelta; // TODO: THIS IS NOT CORRECT. WE NEED CAMERA FORWARD/RIGHT/UP.
-    f32 cameraPitchDelta = stopWatch.deltaSeconds * cameraPitchRotationSpeedPerSecond * inputState.mouseDeltaY;
-    glm::mat4 viewMat = updateCamera(&camera, glm::vec3(cameraPosDelta), cameraPitchDelta, 0.0f);
+    cameraPosition += cameraPosDelta;
+    f32 cameraPitchDelta = hiddenMouse ? static_cast<f32>(stopWatch.deltaSeconds * cameraPitchRotationSpeedPerSecond * inputState.mouseDeltaY) : 0.0f;
+    f32 cameraYawDelta = hiddenMouse ? static_cast<f32>(stopWatch.deltaSeconds * cameraYawRotationSpeedPerSecond * -inputState.mouseDeltaX) : 0.0f;
+    glm::mat4 viewMat = updateCamera(&camera, glm::vec3(cameraPosDelta), cameraPitchDelta, cameraYawDelta);
 
     // Use keyboard input to move our quad
     const f32 quadMoveSpeedPerSecond = flagIsSet(inputState.down, InputType::SHIFT) ? quadRunMoveSpeedPerSecond : quadWalkMoveSpeedPerSecond;
@@ -131,8 +144,10 @@ void scene(WINDOW_HANDLE windowHandle) {
     glDisable(GL_CULL_FACE);
     setSampler2D(shaderProgram.id, "albedoTex", spiritTexIndex);
     drawTriangles(cubeVertAtt);
+    glEnable(GL_CULL_FACE);
 
     // draw quad
+    glDisable(GL_CULL_FACE);
     glm::mat4 quadTranslationMat = glm::translate(glm::mat4(), quadPosition);
     glm::mat4 quadFrameModelMat = quadTranslationMat * quadScaleMat;
     glBufferSubData(GL_UNIFORM_BUFFER, offsetof(ModelViewProjUBO, model), sizeof(glm::mat4), &quadFrameModelMat);
@@ -147,8 +162,11 @@ void scene(WINDOW_HANDLE windowHandle) {
       {
         if (ImGui::BeginMenu("View"))
         {
-          if (ImGui::MenuItem("Demo Window ", NULL)) {
+          if (ImGui::MenuItem("Demo Window", NULL)) {
             showDemoWindow = !showDemoWindow;
+          }
+          if (ImGui::MenuItem("FPS", NULL)) {
+            showFPS = !showFPS;
           }
           ImGui::EndMenu();
         }
@@ -156,6 +174,13 @@ void scene(WINDOW_HANDLE windowHandle) {
       }
       if(showDemoWindow) {
         ImGui::ShowDemoWindow(&showDemoWindow);
+      }
+      fpsSampler.addValue(stopWatch.deltaSeconds);
+      const ImGuiWindowFlags textNoFrills = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize;
+      if(showFPS){
+        if(ImGui::Begin("FPS", &showFPS, textNoFrills)) {
+          ImGui::Text("%5.1f ms | %3.1f fps", fpsSampler.average() * 1000.0, 1.0 / fpsSampler.average());
+        }ImGui::End();
       }
     }
     renderImGui();

@@ -21,10 +21,10 @@ void initWindow(u32 width, u32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_H
           SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
   );
   SDL_CaptureMouse(SDL_TRUE);
-  SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
 
   SDL_GLContext context = SDL_GL_CreateContext(window);
   SDL_GL_MakeCurrent(window, context);
+  SDL_GL_SetSwapInterval(1); // enable v-sync
 
   *windowHandle = window;
   *glContextHandle = context;
@@ -44,12 +44,12 @@ void windowExtent(WINDOW_HANDLE window, s32* width, s32* height) {
   assert(*width >= 0 && *height >= 0);
 }
 
+inline void hideMouse(bool hide) { SDL_SetRelativeMouseMode(hide ? SDL_TRUE : SDL_FALSE); }
+
 /* INPUT */
 void getKeyboardInput(InputState* prevState) {
   prevState->activated = 0;
   prevState->released = 0;
-  prevState->mouseDeltaX = 0;
-  prevState->mouseDeltaY = 0;
 
   SDL_Event event;
   while( SDL_PollEvent( &event ) ){
@@ -85,13 +85,14 @@ void getKeyboardInput(InputState* prevState) {
         prevState->quit = true;
         break;
       case SDL_MOUSEMOTION:
-        prevState->mouseDeltaX += event.motion.xrel;
-        prevState->mouseDeltaY += event.motion.yrel;
         break;
       default:
         break;
     }
   }
+
+  SDL_GetRelativeMouseState(&prevState->mouseDeltaX, &prevState->mouseDeltaY);
+  prevState->mouseDeltaY = -prevState->mouseDeltaY;
 
   setFlags(&prevState->down, prevState->activated);
   removeFlags(&prevState->down, prevState->released);
@@ -112,8 +113,7 @@ void closeFile(FILE_HANDLE file) {
 }
 
 /* TIME */
-inline f64 getTimeMilliseconds() { return SDL_GetTicks(); }
-inline f64 getTimeSeconds() { return getTimeMilliseconds() / 1000.0; }
+inline f64 getTimeSeconds() { return static_cast<f64>(SDL_GetPerformanceCounter()) / static_cast<f64>(SDL_GetPerformanceFrequency()); }
 
 /* IMGUI */
 void initImgui(WINDOW_HANDLE windowHandle, GL_CONTEXT_HANDLE glContextHandle) {

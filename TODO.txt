@@ -1,0 +1,2 @@
+- Determine why there is sometimes stuttering on a simple scene
+- Determine why the relative mouse movements sometimes explode
