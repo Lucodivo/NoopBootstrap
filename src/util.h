@@ -5,29 +5,27 @@ struct Box {
   glm::vec3 diagonal;
 };
 
-struct StopWatch {
+struct Stopwatch {
   f64 totalElapsedSeconds;
   f64 deltaSeconds;
   f64 lastKnownFrame;
-  StopWatch();
-  void update();
 };
 
 b32 flagIsSet(b32 flags, b32 queryFlag) { return (flags & queryFlag) ? 1 : 0; } // ensure the values are 0/1
 void setFlags(b32* outFlags, b32 newFlags) { *outFlags |= newFlags; }
 void removeFlags(b32* outFlags, b32 removeFlags) { *outFlags &= ~removeFlags; }
 
-StopWatch::StopWatch() {
-  totalElapsedSeconds = 0.0f;
-  lastKnownFrame = getTimeSeconds();
-  deltaSeconds = 0.0f;
+void reset(Stopwatch* stopwatch) {
+  stopwatch->totalElapsedSeconds = 0.0f;
+  stopwatch->lastKnownFrame = getTimeSeconds();
+  stopwatch->deltaSeconds = 0.0f;
 }
 
-void StopWatch::update() {
+void lap(Stopwatch* stopwatch) {
   f64 t = getTimeSeconds();
-  deltaSeconds = t - lastKnownFrame;
-  lastKnownFrame = t;
-  totalElapsedSeconds += deltaSeconds;
+  stopwatch->deltaSeconds = t - stopwatch->lastKnownFrame;
+  stopwatch->lastKnownFrame = t;
+  stopwatch->totalElapsedSeconds += stopwatch->deltaSeconds;
 }
 
 struct RingSampler {

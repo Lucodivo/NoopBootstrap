@@ -111,12 +111,13 @@ void scene(WINDOW_HANDLE windowHandle) {
   const f32 cameraPitchRotationSpeedPerSecond = 0.04f;
   const f32 cameraYawRotationSpeedPerSecond = 0.04f;
 
-  InputState inputState = {};
+  InputState inputState{};
   bool showNavBar = true, showDemoWindow = false, showFPS = true;
   RingSampler fpsSampler = RingSampler();
-  StopWatch stopWatch = StopWatch();
+  Stopwatch stopwatch{};
+  reset(&stopwatch);
   while(!inputState.quit && !flagIsSet(inputState.released, InputType::ESC)) {
-    stopWatch.update();
+    lap(&stopwatch);
     getKeyboardInput(&inputState);
 
     // Toggle mouse capture
@@ -132,23 +133,23 @@ void scene(WINDOW_HANDLE windowHandle) {
 
     // Update camera
     const f32 cameraMoveSpeedPerSecond = flagIsSet(inputState.down, InputType::SHIFT) ? cameraRunMoveSpeedPerSecond : cameraWalkMoveSpeedPerSecond;
-    f32 forwardDeltaUnits = static_cast<f32>(stopWatch.deltaSeconds * cameraMoveSpeedPerSecond * (flagIsSet(inputState.down, InputType::W) - flagIsSet(inputState.down, InputType::S)));
-    f32 rightDeltaUnits = static_cast<f32>(stopWatch.deltaSeconds * cameraMoveSpeedPerSecond * (flagIsSet(inputState.down, InputType::D) - flagIsSet(inputState.down, InputType::A)));
+    f32 forwardDeltaUnits = static_cast<f32>(stopwatch.deltaSeconds * cameraMoveSpeedPerSecond * (flagIsSet(inputState.down, InputType::W) - flagIsSet(inputState.down, InputType::S)));
+    f32 rightDeltaUnits = static_cast<f32>(stopwatch.deltaSeconds * cameraMoveSpeedPerSecond * (flagIsSet(inputState.down, InputType::D) - flagIsSet(inputState.down, InputType::A)));
     glm::vec3 cameraPosDelta = glm::vec3(
             forwardDeltaUnits * camera.forward.x + rightDeltaUnits * camera.right.x,
             0.0f,
             forwardDeltaUnits * camera.forward.z + rightDeltaUnits * camera.right.z
             );
     cameraPosition += cameraPosDelta;
-    f32 cameraPitchDelta = hiddenMouse ? static_cast<f32>(stopWatch.deltaSeconds * cameraPitchRotationSpeedPerSecond * inputState.mouseDeltaY) : 0.0f;
-    f32 cameraYawDelta = hiddenMouse ? static_cast<f32>(stopWatch.deltaSeconds * cameraYawRotationSpeedPerSecond * -inputState.mouseDeltaX) : 0.0f;
+    f32 cameraPitchDelta = hiddenMouse ? static_cast<f32>(stopwatch.deltaSeconds * cameraPitchRotationSpeedPerSecond * inputState.mouseDeltaY) : 0.0f;
+    f32 cameraYawDelta = hiddenMouse ? static_cast<f32>(stopwatch.deltaSeconds * cameraYawRotationSpeedPerSecond * -inputState.mouseDeltaX) : 0.0f;
     glm::mat4 viewMat = updateCamera(&camera, glm::vec3(cameraPosDelta), cameraPitchDelta, cameraYawDelta);
 
     // Use keyboard input to move our quad
     const f32 spriteMoveSpeedPerSecond = flagIsSet(inputState.down, InputType::SHIFT) ? spriteRunMovePixelsPerSecond : spriteWalkMovePixelsPerSecond;
     glm::vec2 spriteDelta = glm::vec2(
-            stopWatch.deltaSeconds * spriteMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::RIGHT) - flagIsSet(inputState.down, InputType::LEFT)),
-            stopWatch.deltaSeconds * spriteMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::UP) - flagIsSet(inputState.down, InputType::DOWN))
+            stopwatch.deltaSeconds * spriteMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::RIGHT) - flagIsSet(inputState.down, InputType::LEFT)),
+            stopwatch.deltaSeconds * spriteMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::UP) - flagIsSet(inputState.down, InputType::DOWN))
             );
     spritePosition += spriteDelta;
     ivec2 birdPixelDimens{23, 32}; // Note: THESE NUMBERS WERE MANUALLY PULLED AFTER INSPECTING THE BIRD SPRITE TEXTURE
@@ -201,7 +202,7 @@ void scene(WINDOW_HANDLE windowHandle) {
       if(showDemoWindow) {
         ImGui::ShowDemoWindow(&showDemoWindow);
       }
-      fpsSampler.addValue(stopWatch.deltaSeconds);
+      fpsSampler.addValue(stopwatch.deltaSeconds);
       const ImGuiWindowFlags textNoFrills = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize;
       if(showFPS){
         if(ImGui::Begin("FPS", &showFPS, textNoFrills)) {
