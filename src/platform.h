@@ -26,7 +26,7 @@ void loadOpenGL();
 void initWindow(u32 width, u32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_HANDLE* glContextHandle);
 void deinitWindow(WINDOW_HANDLE window);
 inline void swapBuffers(WINDOW_HANDLE window);
-void windowExtent(WINDOW_HANDLE window, s32* width, s32* height);
+void getWindowExtent(WINDOW_HANDLE window, s32* width, s32* height);
 
 /* INPUT */
 void getKeyboardInput(InputState* prevState);

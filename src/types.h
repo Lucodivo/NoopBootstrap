@@ -41,3 +41,8 @@ typedef size_t memory_index;
 #define Min(x, y) (x <= y ? x : y)
 #define Max(x, y) (x >= y ? x : y)
 #define Clamp(x, low, high) (x <= low ? low : (x >= high) ? high : x)
+
+struct ivec2 {
+  s32 x;
+  s32 y;
+};

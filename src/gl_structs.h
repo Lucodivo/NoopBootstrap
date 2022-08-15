@@ -41,3 +41,10 @@ struct ModelViewProjUBO {  // base alignment   // aligned offset
   glm::mat4 view;          // 16                // 64
   glm::mat4 proj;          // 16                // 128
 };
+
+u32 posUBOBindingIndex = 1;
+struct PosUBO {                 // base alignment   // aligned offset
+  glm::vec2 spriteDimens;       // 8                // 0
+  glm::vec2 emulatedWindowRes;  // 8                // 8
+  glm::vec2 pos;                // 8                // 16
+};

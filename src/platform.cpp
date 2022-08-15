@@ -39,7 +39,7 @@ inline void swapBuffers(WINDOW_HANDLE window) {
   SDL_GL_SwapWindow((SDL_Window*)window);
 }
 
-void windowExtent(WINDOW_HANDLE window, s32* width, s32* height) {
+void getWindowExtent(WINDOW_HANDLE window, s32* width, s32* height) {
   SDL_GetWindowSize((SDL_Window*)window, width, height);
   assert(*width >= 0 && *height >= 0);
 }
