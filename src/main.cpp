@@ -41,8 +41,8 @@ void scene(WINDOW_HANDLE windowHandle) {
   glm::vec3 cubeScale = glm::vec3(1.5f);
   glm::vec3 cubeInitRotationAxis = glm::vec3(1.0f, 1.0f, 1.0f);
   glm::vec3 cubeActiveRotationAxis = worldUp;
-  f32 cubeActiveRotationPerSecond = 20.0f * RadiansPerDegree;
-  glm::mat4 cubeScaleRotationMat = glm::rotate(glm::scale(glm::mat4(), cubeScale),  -45.0f * RadiansPerDegree, cubeInitRotationAxis);
+  f64 cubeActiveRotationPerSecond = Radians(20.0f);
+  glm::mat4 cubeScaleRotationMat = glm::rotate(glm::scale(glm::mat4(), cubeScale),  Radians(-45.0f), cubeInitRotationAxis);
   glm::mat4 cubeTranslationMat = glm::translate(glm::mat4(), cubePosition);
 
   // load model (w/ vertex attributes) through a gltf file
@@ -163,7 +163,7 @@ void scene(WINDOW_HANDLE windowHandle) {
 
     // draw cube
     glUseProgram(texShaderProgram.id);
-    glm::mat4 cubeFrameModelMat = cubeTranslationMat * glm::rotate(cubeScaleRotationMat, static_cast<f32>(cubeActiveRotationPerSecond * getTimeSeconds()), cubeActiveRotationAxis);
+    glm::mat4 cubeFrameModelMat = cubeTranslationMat * glm::rotate(cubeScaleRotationMat, static_cast<f32>(cubeActiveRotationPerSecond * stopwatch.totalElapsedSeconds), cubeActiveRotationAxis);
     glBufferSubData(GL_UNIFORM_BUFFER, offsetof(ModelViewProjUBO, model), sizeof(glm::mat4), &cubeFrameModelMat);
     glDisable(GL_CULL_FACE);
     setSampler2D(texShaderProgram.id, "albedoTex", spiritTexIndex);

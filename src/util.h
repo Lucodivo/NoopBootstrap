@@ -6,9 +6,10 @@ struct Box {
 };
 
 struct Stopwatch {
+  u64 lastPerfCounter;
+  f64 secondsPerPerfCounter;
   f64 totalElapsedSeconds;
   f64 deltaSeconds;
-  f64 lastKnownFrame;
 };
 
 b32 flagIsSet(b32 flags, b32 queryFlag) { return (flags & queryFlag) ? 1 : 0; } // ensure the values are 0/1
@@ -16,15 +17,16 @@ void setFlags(b32* outFlags, b32 newFlags) { *outFlags |= newFlags; }
 void removeFlags(b32* outFlags, b32 removeFlags) { *outFlags &= ~removeFlags; }
 
 void reset(Stopwatch* stopwatch) {
+  stopwatch->secondsPerPerfCounter = 1.0 / getPerformanceCounterFrequencyPerSecond();
   stopwatch->totalElapsedSeconds = 0.0f;
-  stopwatch->lastKnownFrame = getTimeSeconds();
+  stopwatch->lastPerfCounter = getPerformanceCounter();
   stopwatch->deltaSeconds = 0.0f;
 }
 
 void lap(Stopwatch* stopwatch) {
-  f64 t = getTimeSeconds();
-  stopwatch->deltaSeconds = t - stopwatch->lastKnownFrame;
-  stopwatch->lastKnownFrame = t;
+  u64 currPerfCounter = getPerformanceCounter();
+  stopwatch->deltaSeconds = (currPerfCounter - stopwatch->lastPerfCounter) * stopwatch->secondsPerPerfCounter;
+  stopwatch->lastPerfCounter = currPerfCounter;
   stopwatch->totalElapsedSeconds += stopwatch->deltaSeconds;
 }
 

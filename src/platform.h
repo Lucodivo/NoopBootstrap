@@ -37,8 +37,8 @@ const char* fileBytes(FILE_HANDLE file);
 void closeFile(FILE_HANDLE file);
 
 /* TIME */
-inline f64 getTimeMilliseconds();
-inline f64 getTimeSeconds();
+u64 getPerformanceCounter();
+u64 getPerformanceCounterFrequencyPerSecond();
 
 /* IMGUI */
 void initImgui(WINDOW_HANDLE windowHandle, GL_CONTEXT_HANDLE glContextHandle);

@@ -16,8 +16,20 @@ than GLSL so that anyone who knows GLSL, can use GLM as well in C++."](https://g
 - stb_image/stb_image_write: [Single header libraries used for reading/writing images.](https://github.com/nothings/stb)
 
 ### Building
-1) Build "bootstrap-dependencies" using the CMakeLists.txt found in the external directory.
-2) Build "bootstrap" using the CMakeLists.txt in the root directory
+- [⚠WORK IN PROGRESS⚠]: Currently only tested using MSVC's cl compiler. There is definitely more work to be done
+when working with other compilers.
+
+1) Clone the project using the following git command:
+```
+git clone https://github.com/Lucodivo/NoopScenes
+```
+2) Ensure the dependency submodules are initialized using the following git commands:  
+```
+git submodule init
+git submodule update
+```
+3) Build "bootstrap-dependencies" using the CMakeLists.txt found in the external directory.
+4) Build "bootstrap" using the CMakeLists.txt in the root directory
 
 ### Running
 The program must run with root as the working directory. Ensure that the executable and the SDL2 dynamic library (dll) 

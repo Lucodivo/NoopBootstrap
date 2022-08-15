@@ -113,7 +113,8 @@ void closeFile(FILE_HANDLE file) {
 }
 
 /* TIME */
-inline f64 getTimeSeconds() { return static_cast<f64>(SDL_GetPerformanceCounter()) / static_cast<f64>(SDL_GetPerformanceFrequency()); }
+inline u64 getPerformanceCounter() { return SDL_GetPerformanceCounter(); }
+inline u64 getPerformanceCounterFrequencyPerSecond() { return SDL_GetPerformanceFrequency(); }
 
 /* IMGUI */
 void initImgui(WINDOW_HANDLE windowHandle, GL_CONTEXT_HANDLE glContextHandle) {
