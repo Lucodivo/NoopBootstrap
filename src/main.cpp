@@ -4,20 +4,23 @@
 #define INIT_WINDOW_HEIGHT 1080
 #define INIT_ASPECT (f32)INIT_WINDOW_WIDTH / INIT_WINDOW_HEIGHT
 
-void scene(WINDOW_HANDLE windowHandle);
+void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle);
 
 int main(int argc, char* argv[]) {
   WINDOW_HANDLE windowHandle;
   GL_CONTEXT_HANDLE glContextHandle;
   initWindow(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT, &windowHandle, &glContextHandle);
+  AUDIO_HANDLE audioHandle;
+  initAudio(&audioHandle);
   loadOpenGL();
   initImgui(windowHandle, glContextHandle);
-  scene(windowHandle);
-  deinitWindow(windowHandle);
+  scene(windowHandle, audioHandle);
+  deinitAudio(&audioHandle);
+  deinitWindow(&windowHandle);
   return 0;
 }
 
-void scene(WINDOW_HANDLE windowHandle) {
+void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
 
   const glm::vec3 worldUp = glm::vec3{0.0f, 1.0f, 0.0f};
 
@@ -25,7 +28,7 @@ void scene(WINDOW_HANDLE windowHandle) {
   getWindowExtent(windowHandle, &windowExtent.x, &windowExtent.y);
   ivec2 emulatedSpriteResolution{windowExtent.x / 4, windowExtent.y / 4};
 
-  bool hiddenMouse = true;
+  bool hiddenMouse = false;
   hideMouse(hiddenMouse);
 
   // load 2d textures
@@ -33,6 +36,10 @@ void scene(WINDOW_HANDLE windowHandle) {
   ivec2 spiritTexDimens, birdTexDimens;
   load2DTexture("data/textures/seed_spirit.png", &spiritTexture, &spiritTexDimens.x, &spiritTexDimens.y, LoadTextureFlags::CHUNKY_PIXELS);
   load2DTexture("data/textures/bird_guy.png", &birdTexture, &birdTexDimens.x, &birdTexDimens.y, LoadTextureFlags::CHUNKY_PIXELS);
+
+  // load sounds
+  loadUpSong(audioHandle, "data/sounds/songs/fairy_loop.wav");
+  loadUpSoundEffect(audioHandle, "data/sounds/clips/echo.wav");
 
   // load simple vertex attributes for cube
   VertexAtt cubeVertAtt = initializeCubePosNormTexVertexAttBuffers();
@@ -112,7 +119,7 @@ void scene(WINDOW_HANDLE windowHandle) {
   const f32 cameraYawRotationSpeedPerSecond = 0.04f;
 
   InputState inputState{};
-  bool showNavBar = true, showDemoWindow = false, showFPS = true;
+  bool showNavBar = true, showDemoWindow = false, showFPS = true, playMusic = false;
   RingSampler fpsSampler = RingSampler();
   Stopwatch stopwatch{};
   reset(&stopwatch);
@@ -120,15 +127,33 @@ void scene(WINDOW_HANDLE windowHandle) {
     lap(&stopwatch);
     getKeyboardInput(&inputState);
 
-    // Toggle mouse capture
-    if(flagIsSet(inputState.released, InputType::TAB)) {
+    auto toggleMouseAndCameraControl = [&]() {
       hiddenMouse = !hiddenMouse;
       hideMouse(hiddenMouse);
+    };
+
+    auto toggleMusic = [&]() {
+      playMusic = !playMusic;
+      pauseSong(audioHandle, !playMusic);
+    };
+
+    // Toggle mouse capture
+    if(flagIsSet(inputState.released, InputType::TAB)) {
+      toggleMouseAndCameraControl();
     }
 
     // Toggle nav bar
     if(flagIsSet(inputState.released, InputType::ALT)) {
       showNavBar = !showNavBar;
+    }
+
+    // Toggle music
+    if(flagIsSet(inputState.released, InputType::Q)) {
+      toggleMusic();
+    }
+
+    if(flagIsSet(inputState.released, InputType::E)) {
+      playSoundEffect(audioHandle);
     }
 
     // Update camera
@@ -183,6 +208,19 @@ void scene(WINDOW_HANDLE windowHandle) {
       if(showNavBar) {
         if (ImGui::BeginMainMenuBar())
         {
+          if (ImGui::BeginMenu("Edit"))
+          {
+            if (ImGui::MenuItem("Toggle Camera/Mouse", "Tab")) {
+              toggleMouseAndCameraControl();
+            }
+            if (ImGui::MenuItem("Toggle Music", "Q")) {
+              toggleMusic();
+            }
+            if (ImGui::MenuItem("Play Sound Effect", "E")) {
+              playSoundEffect(audioHandle);
+            }
+            ImGui::EndMenu();
+          }
           if (ImGui::BeginMenu("View"))
           {
             if(ImGui::MenuItem("Navigation Bar", "Alt")) {
@@ -193,6 +231,10 @@ void scene(WINDOW_HANDLE windowHandle) {
             }
             if (ImGui::MenuItem("FPS", NULL)) {
               showFPS = !showFPS;
+            }
+            if (ImGui::MenuItem("Toggle Music", NULL)) {
+              playMusic = !playMusic;
+              pauseSong(audioHandle, !playMusic);
             }
             ImGui::EndMenu();
           }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL.h>
+#include <SDL_audio.h>
 #include <glad/glad.h>
 #include <imgui.h>
 #include <imgui_impl_sdl.h>
