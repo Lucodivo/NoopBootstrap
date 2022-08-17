@@ -30,9 +30,10 @@ void initWindow(u32 width, u32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_H
   *glContextHandle = context;
 }
 
-void deinitWindow(WINDOW_HANDLE window) {
-  SDL_DestroyWindow((SDL_Window*)window);
+void deinitWindow(WINDOW_HANDLE* window) {
+  SDL_DestroyWindow((SDL_Window*)*window);
   SDL_Quit();
+  *window = nullptr;
 }
 
 inline void swapBuffers(WINDOW_HANDLE window) {
@@ -95,7 +96,7 @@ void getKeyboardInput(InputState* prevState) {
   prevState->mouseDeltaY = -prevState->mouseDeltaY;
 
   setFlags(&prevState->down, prevState->activated);
-  removeFlags(&prevState->down, prevState->released);
+  clearFlags(&prevState->down, prevState->released);
 }
 
 /* FILE */
@@ -136,8 +137,9 @@ struct AudioState {
 
 void sdlAudioCallback(void* userdata, u8* stream, s32 len) {
   AudioState* audioState = static_cast<AudioState*>(userdata);
-  Sound& song = audioState->song;
 
+  // insert song into buffer if available
+  Sound& song = audioState->song;
   if(flagIsSet(song.audioFlags, AudioFlags::ACTIVE) && !flagIsSet(song.audioFlags, AudioFlags::PAUSED)) {
     s32 remainingAudio = song.length - song.readPos;
     u32 bytesToWrite = Min(len, remainingAudio);
@@ -158,6 +160,17 @@ void sdlAudioCallback(void* userdata, u8* stream, s32 len) {
   } else {
     // clear the audio stream
     memset(stream, 0, len);
+  }
+
+  // play sound effect if available
+  Sound& soundEffect = audioState->soundEffect;
+  if(flagIsSet(soundEffect.audioFlags, AudioFlags::ACTIVE) &&
+          !flagIsSet(soundEffect.audioFlags, AudioFlags::PAUSED) &&
+          soundEffect.readPos != soundEffect.length) {
+    s32 remainingAudio = soundEffect.length - soundEffect.readPos;
+    u32 bytesToWrite = Min(len, remainingAudio);
+    SDL_MixAudioFormat(stream, soundEffect.buffer + soundEffect.readPos, soundEffect.audioSpec.format, bytesToWrite, 128);
+    soundEffect.readPos += bytesToWrite;
   }
 }
 
@@ -182,12 +195,31 @@ void initAudio(AUDIO_HANDLE* handle) {
   *handle = audioState;
 }
 
+void deinitAudio(AUDIO_HANDLE* handle) {
+  AudioState* audioState = static_cast<AudioState*>(*handle);
+  Sound& song = audioState->song;
+  Sound& soundEffect = audioState->soundEffect;
+
+  SDL_PauseAudioDevice(audioState->deviceId, 1);
+
+  if(flagIsSet(song.audioFlags, AudioFlags::ACTIVE)) {
+    SDL_FreeWAV(song.buffer);
+  }
+
+  if(flagIsSet(soundEffect.audioFlags, AudioFlags::ACTIVE)) {
+    SDL_FreeWAV(soundEffect.buffer);
+  }
+
+  delete audioState;
+  *handle = nullptr;
+}
+
 void loadUpSong(AUDIO_HANDLE handle, const char* fileName) {
   AudioState* audioState = static_cast<AudioState*>(handle);
   Sound& song = audioState->song;
 
-  if(flagIsSet(audioState->song.audioFlags, AudioFlags::ACTIVE)) {
-    SDL_FreeWAV(audioState->song.buffer);
+  if(flagIsSet(song.audioFlags, AudioFlags::ACTIVE)) {
+    SDL_FreeWAV(song.buffer);
   }
 
   if (SDL_LoadWAV(fileName, &song.audioSpec, &song.buffer, &song.length) == NULL) {
@@ -207,12 +239,34 @@ void pauseSong(AUDIO_HANDLE handle, bool pause) {
   if(pause) {
     setFlags(&song.audioFlags, AudioFlags::PAUSED);
   } else {
-    removeFlags(&song.audioFlags, AudioFlags::PAUSED);
+    clearFlags(&song.audioFlags, AudioFlags::PAUSED);
   }
 }
 
-void playSoundEffect(AUDIO_HANDLE handle, const char* fileName) {
-  // TODO: DO IT
+void loadUpSoundEffect(AUDIO_HANDLE handle, const char* fileName) {
+  AudioState* audioState = static_cast<AudioState*>(handle);
+  Sound& soundEffect = audioState->soundEffect;
+
+  if(flagIsSet(soundEffect.audioFlags, AudioFlags::ACTIVE)) {
+    SDL_FreeWAV(soundEffect.buffer);
+  }
+
+  if (SDL_LoadWAV(fileName, &soundEffect.audioSpec, &soundEffect.buffer, &soundEffect.length) == NULL) {
+    fprintf(stderr, "Could not open wav sound file (%s fileName): %s\n", fileName, SDL_GetError());
+  }
+
+  // TODO: Potentially adjust some aspect of the audio spec for device
+
+  soundEffect.audioFlags = 0;
+  setFlags(&soundEffect.audioFlags, AudioFlags::ACTIVE | AudioFlags::PAUSED);
+}
+
+void playSoundEffect(AUDIO_HANDLE handle) {
+  AudioState* audioState = static_cast<AudioState*>(handle);
+  Sound& soundEffect = audioState->soundEffect;
+  assert(flagIsSet(soundEffect.audioFlags, AudioFlags::ACTIVE));
+  clearFlags(&soundEffect.audioFlags, AudioFlags::PAUSED);
+  soundEffect.readPos = 0;
 }
 
 /* TIME */

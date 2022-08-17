@@ -15,7 +15,8 @@ int main(int argc, char* argv[]) {
   loadOpenGL();
   initImgui(windowHandle, glContextHandle);
   scene(windowHandle, audioHandle);
-  deinitWindow(windowHandle);
+  deinitAudio(&audioHandle);
+  deinitWindow(&windowHandle);
   return 0;
 }
 
@@ -27,7 +28,7 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
   getWindowExtent(windowHandle, &windowExtent.x, &windowExtent.y);
   ivec2 emulatedSpriteResolution{windowExtent.x / 4, windowExtent.y / 4};
 
-  bool hiddenMouse = true;
+  bool hiddenMouse = false;
   hideMouse(hiddenMouse);
 
   // load 2d textures
@@ -38,6 +39,7 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
 
   // load sounds
   loadUpSong(audioHandle, "data/sounds/songs/fairy_loop.wav");
+  loadUpSoundEffect(audioHandle, "data/sounds/clips/echo.wav");
 
   // load simple vertex attributes for cube
   VertexAtt cubeVertAtt = initializeCubePosNormTexVertexAttBuffers();
@@ -125,15 +127,33 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
     lap(&stopwatch);
     getKeyboardInput(&inputState);
 
-    // Toggle mouse capture
-    if(flagIsSet(inputState.released, InputType::TAB)) {
+    auto toggleMouseAndCameraControl = [&]() {
       hiddenMouse = !hiddenMouse;
       hideMouse(hiddenMouse);
+    };
+
+    auto toggleMusic = [&]() {
+      playMusic = !playMusic;
+      pauseSong(audioHandle, !playMusic);
+    };
+
+    // Toggle mouse capture
+    if(flagIsSet(inputState.released, InputType::TAB)) {
+      toggleMouseAndCameraControl();
     }
 
     // Toggle nav bar
     if(flagIsSet(inputState.released, InputType::ALT)) {
       showNavBar = !showNavBar;
+    }
+
+    // Toggle music
+    if(flagIsSet(inputState.released, InputType::Q)) {
+      toggleMusic();
+    }
+
+    if(flagIsSet(inputState.released, InputType::E)) {
+      playSoundEffect(audioHandle);
     }
 
     // Update camera
@@ -188,6 +208,19 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
       if(showNavBar) {
         if (ImGui::BeginMainMenuBar())
         {
+          if (ImGui::BeginMenu("Edit"))
+          {
+            if (ImGui::MenuItem("Toggle Camera/Mouse", "Tab")) {
+              toggleMouseAndCameraControl();
+            }
+            if (ImGui::MenuItem("Toggle Music", "Q")) {
+              toggleMusic();
+            }
+            if (ImGui::MenuItem("Play Sound Effect", "E")) {
+              playSoundEffect(audioHandle);
+            }
+            ImGui::EndMenu();
+          }
           if (ImGui::BeginMenu("View"))
           {
             if(ImGui::MenuItem("Navigation Bar", "Alt")) {
