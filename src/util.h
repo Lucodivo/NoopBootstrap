@@ -13,6 +13,7 @@ struct Stopwatch {
 };
 
 b32 flagIsSet(b32 flags, b32 queryFlag) { return (flags & queryFlag) ? 1 : 0; } // ensure the values are 0/1
+b32 flagsAreSet(b32 flags, b32 queryFlags) { return ((flags & queryFlags) == queryFlags) ? 1 : 0; }
 void setFlags(b32* outFlags, b32 newFlags) { *outFlags |= newFlags; }
 void removeFlags(b32* outFlags, b32 removeFlags) { *outFlags &= ~removeFlags; }
 

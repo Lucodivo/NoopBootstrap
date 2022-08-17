@@ -4,20 +4,22 @@
 #define INIT_WINDOW_HEIGHT 1080
 #define INIT_ASPECT (f32)INIT_WINDOW_WIDTH / INIT_WINDOW_HEIGHT
 
-void scene(WINDOW_HANDLE windowHandle);
+void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle);
 
 int main(int argc, char* argv[]) {
   WINDOW_HANDLE windowHandle;
   GL_CONTEXT_HANDLE glContextHandle;
   initWindow(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT, &windowHandle, &glContextHandle);
+  AUDIO_HANDLE audioHandle;
+  initAudio(&audioHandle);
   loadOpenGL();
   initImgui(windowHandle, glContextHandle);
-  scene(windowHandle);
+  scene(windowHandle, audioHandle);
   deinitWindow(windowHandle);
   return 0;
 }
 
-void scene(WINDOW_HANDLE windowHandle) {
+void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
 
   const glm::vec3 worldUp = glm::vec3{0.0f, 1.0f, 0.0f};
 
@@ -33,6 +35,9 @@ void scene(WINDOW_HANDLE windowHandle) {
   ivec2 spiritTexDimens, birdTexDimens;
   load2DTexture("data/textures/seed_spirit.png", &spiritTexture, &spiritTexDimens.x, &spiritTexDimens.y, LoadTextureFlags::CHUNKY_PIXELS);
   load2DTexture("data/textures/bird_guy.png", &birdTexture, &birdTexDimens.x, &birdTexDimens.y, LoadTextureFlags::CHUNKY_PIXELS);
+
+  // load sounds
+  loadUpSong(audioHandle, "data/sounds/songs/fairy_loop.wav");
 
   // load simple vertex attributes for cube
   VertexAtt cubeVertAtt = initializeCubePosNormTexVertexAttBuffers();
@@ -112,7 +117,7 @@ void scene(WINDOW_HANDLE windowHandle) {
   const f32 cameraYawRotationSpeedPerSecond = 0.04f;
 
   InputState inputState{};
-  bool showNavBar = true, showDemoWindow = false, showFPS = true;
+  bool showNavBar = true, showDemoWindow = false, showFPS = true, playMusic = false;
   RingSampler fpsSampler = RingSampler();
   Stopwatch stopwatch{};
   reset(&stopwatch);
@@ -193,6 +198,10 @@ void scene(WINDOW_HANDLE windowHandle) {
             }
             if (ImGui::MenuItem("FPS", NULL)) {
               showFPS = !showFPS;
+            }
+            if (ImGui::MenuItem("Toggle Music", NULL)) {
+              playMusic = !playMusic;
+              pauseSong(audioHandle, !playMusic);
             }
             ImGui::EndMenu();
           }

@@ -112,6 +112,109 @@ void closeFile(FILE_HANDLE file) {
   SDL_free(file);
 }
 
+/* AUDIO: Currently only supports WAV */
+enum AudioFlags {
+  ACTIVE = 1 << 0,
+  PAUSED = 1 << 1,
+  LOOP = 1 << 2,
+};
+
+struct Sound {
+  SDL_AudioSpec audioSpec;
+  u8* buffer;
+  u32 length;
+  u32 readPos;
+  b32 audioFlags;
+};
+
+struct AudioState {
+  Sound song;
+  Sound soundEffect;
+  SDL_AudioSpec audioSpec;
+  SDL_AudioDeviceID deviceId;
+};
+
+void sdlAudioCallback(void* userdata, u8* stream, s32 len) {
+  AudioState* audioState = static_cast<AudioState*>(userdata);
+  Sound& song = audioState->song;
+
+  if(flagIsSet(song.audioFlags, AudioFlags::ACTIVE) && !flagIsSet(song.audioFlags, AudioFlags::PAUSED)) {
+    s32 remainingAudio = song.length - song.readPos;
+    u32 bytesToWrite = Min(len, remainingAudio);
+    memcpy(stream, song.buffer + song.readPos, bytesToWrite);
+    song.readPos += bytesToWrite;
+
+    // check to see if we reached the end of the song
+    if(song.readPos == song.length) {
+      u32 remainingLen = len - bytesToWrite;
+      if(flagIsSet(song.audioFlags, AudioFlags::LOOP)) {
+        memcpy(stream + bytesToWrite, song.buffer, remainingLen);
+        song.readPos = remainingLen;
+      } else {
+        memset(stream + bytesToWrite, 0, remainingLen);
+        setFlags(&song.audioFlags, AudioFlags::PAUSED);
+      }
+    }
+  } else {
+    // clear the audio stream
+    memset(stream, 0, len);
+  }
+}
+
+void initAudio(AUDIO_HANDLE* handle) {
+  SDL_Init(SDL_INIT_AUDIO);
+
+  AudioState* audioState = new AudioState();
+
+  memset(audioState, 0, sizeof(AudioState));
+
+  SDL_AudioSpec desiredAudioSpec{};
+  desiredAudioSpec.freq = 44100;
+  desiredAudioSpec.format = AUDIO_S32;
+  desiredAudioSpec.channels = 2;
+  desiredAudioSpec.samples = 4096;
+  desiredAudioSpec.callback = sdlAudioCallback;
+  desiredAudioSpec.userdata = audioState;
+
+  audioState->deviceId = SDL_OpenAudioDevice(NULL, 0, &desiredAudioSpec, &audioState->audioSpec, 0);
+  SDL_PauseAudioDevice(audioState->deviceId, 0);
+
+  *handle = audioState;
+}
+
+void loadUpSong(AUDIO_HANDLE handle, const char* fileName) {
+  AudioState* audioState = static_cast<AudioState*>(handle);
+  Sound& song = audioState->song;
+
+  if(flagIsSet(audioState->song.audioFlags, AudioFlags::ACTIVE)) {
+    SDL_FreeWAV(audioState->song.buffer);
+  }
+
+  if (SDL_LoadWAV(fileName, &song.audioSpec, &song.buffer, &song.length) == NULL) {
+    fprintf(stderr, "Could not open wav sound file (%s fileName): %s\n", fileName, SDL_GetError());
+  }
+
+  // TODO: Potentially adjust some aspect of the audio spec for device
+
+  song.audioFlags = 0;
+  setFlags(&song.audioFlags, AudioFlags::ACTIVE | AudioFlags::LOOP | AudioFlags::PAUSED);
+}
+
+void pauseSong(AUDIO_HANDLE handle, bool pause) {
+  AudioState* audioState = static_cast<AudioState*>(handle);
+  Sound& song = audioState->song;
+  assert(flagIsSet(song.audioFlags, AudioFlags::ACTIVE));
+  if(pause) {
+    setFlags(&song.audioFlags, AudioFlags::PAUSED);
+  } else {
+    removeFlags(&song.audioFlags, AudioFlags::PAUSED);
+  }
+}
+
+void playSoundEffect(AUDIO_HANDLE handle, const char* fileName) {
+  // TODO: DO IT
+}
+
 /* TIME */
 inline u64 getPerformanceCounter() { return SDL_GetPerformanceCounter(); }
 inline u64 getPerformanceCounterFrequencyPerSecond() { return SDL_GetPerformanceFrequency(); }

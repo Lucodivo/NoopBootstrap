@@ -3,6 +3,7 @@
 typedef void* WINDOW_HANDLE;
 typedef void* FILE_HANDLE;
 typedef void* GL_CONTEXT_HANDLE;
+typedef void* AUDIO_HANDLE;
 
 enum InputType {
 #define InputType(name,index,sdlCode) name = 1 << index,
@@ -35,6 +36,12 @@ void getKeyboardInput(InputState* prevState);
 void openFile(const char* fileName, FILE_HANDLE* outFile, size_t* readInBytes);
 const char* fileBytes(FILE_HANDLE file);
 void closeFile(FILE_HANDLE file);
+
+/* AUDIO: Currently only supports WAV */
+void initAudio(AUDIO_HANDLE* handle);
+void loadUpSong(AUDIO_HANDLE handle, const char* fileName);
+void pauseSong(AUDIO_HANDLE handle, bool pause = true);
+void playSoundEffect(AUDIO_HANDLE handle, const char* fileName);
 
 /* TIME */
 u64 getPerformanceCounter();
