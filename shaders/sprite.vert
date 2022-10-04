@@ -15,16 +15,12 @@ layout (location = 1) out vec2 outTex;
 
 void main()
 {
-  float x = (inPos.x) / (ubo.emulatedWindowRes.x * 0.5);
-  float y = (inPos.y) / (ubo.emulatedWindowRes.y * 0.5);
+  // goes from 0 to 1 in x and y coord
+  vec2 normalizedScreenPos = (inPos.xy + ubo.pos) / ubo.emulatedWindowRes;
+  // goes from -1 to 1 in x and y coord
+  vec4 ndcPos = vec4((normalizedScreenPos.x * 2.) - 1., (normalizedScreenPos.y * 2.) - 1., -1., 1.);
 
-  x *= ubo.spriteDimens.x;
-  y *= ubo.spriteDimens.y;
-
-  x += ubo.pos.x / (ubo.emulatedWindowRes.x * 0.5);
-  y += ubo.pos.y / (ubo.emulatedWindowRes.y * 0.5);
-
-  gl_Position = vec4(x, y, -1. /* minumum depth possible */, 1.);
+  gl_Position = ndcPos;
   outNorm = inNorm;
   outTex = inTex;
 }

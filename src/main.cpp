@@ -1,7 +1,7 @@
 #include "main.h"
 
 #define INIT_WINDOW_WIDTH 1920
-#define INIT_WINDOW_HEIGHT 1080
+#define INIT_WINDOW_HEIGHT 1024
 #define INIT_ASPECT (f32)INIT_WINDOW_WIDTH / INIT_WINDOW_HEIGHT
 
 void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle);
@@ -16,17 +16,29 @@ int main(int argc, char* argv[]) {
   initImgui(windowHandle, glContextHandle);
   scene(windowHandle, audioHandle);
   deinitAudio(&audioHandle);
-  deinitWindow(&windowHandle);
+  deinitWindow(&windowHandle, &glContextHandle);
   return 0;
 }
 
+struct AppState {
+  WINDOW_HANDLE windowHandle;
+  AUDIO_HANDLE audioHandle;
+  ivec2 windowDimens;
+  ivec2 spriteScale;
+  bool hiddenMouse;
+};
+
 void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
+  AppState appState;
+  appState.windowHandle = windowHandle;
+  appState.audioHandle = audioHandle;
 
   const glm::vec3 worldUp = glm::vec3{0.0f, 1.0f, 0.0f};
+  const glm::vec4 debugColor = glm::vec4(0.5f, 0.5f, 1.0f, 1.0f);
 
-  ivec2 windowExtent = {};
-  getWindowExtent(windowHandle, &windowExtent.x, &windowExtent.y);
-  ivec2 emulatedSpriteResolution{windowExtent.x / 4, windowExtent.y / 4};
+  getWindowDimens(windowHandle, &appState.windowDimens);
+  ivec2 tileSize{128, 128};
+  ivec2 emulatedSpriteResolution{appState.windowDimens.x / tileSize.x, appState.windowDimens.y / tileSize.y};
 
   bool hiddenMouse = false;
   hideMouse(hiddenMouse);
@@ -60,8 +72,8 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
   f32 qScale = 0.2f;
   glm::vec3 quadScale = glm::vec3(qScale);
   glm::mat4 quadScaleMat = glm::scale(glm::mat4(), quadScale);
-  const f32 spriteWalkMovePixelsPerSecond = 64.0f;
-  const f32 spriteRunMovePixelsPerSecond = spriteWalkMovePixelsPerSecond * 3.0f;
+  const f32 spriteWalkTilesPerSecond = 4.0f;
+  const f32 spriteRunTilesPerSecond = spriteWalkTilesPerSecond * 3.0f;
 
   // camera and projection initial values
   glm::vec3 cameraPosition = glm::vec3{0.0f, 0.0f, -5.0f};
@@ -69,7 +81,6 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
   lookAt(cameraPosition, cubePosition, &camera);
   glm::mat4 projMat = perspective(fieldOfView(13.5f, 25.0f), INIT_ASPECT, 0.01f, 100.0f);
 
-  // create shader program
   ShaderProgram texShaderProgram = createShaderProgram("shaders/pos.vert", "shaders/texture.frag");
   glUseProgram(texShaderProgram.id);
 
@@ -98,8 +109,18 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
   glBindBufferRange(GL_UNIFORM_BUFFER, posUBOBindingIndex, posUboId, 0, sizeof(PosUBO));
   glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+  ShaderProgram debugQuadShaderProgram = createShaderProgram("shaders/sprite.vert", "shaders/single_color.frag");
+  glUseProgram(debugQuadShaderProgram.id);
+
+  GLuint debugUboId;
+  glGenBuffers(1, &debugUboId);
+  glBindBuffer(GL_UNIFORM_BUFFER, debugUboId);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(DebugUBO), NULL, GL_STATIC_DRAW);
+  glBufferSubData(GL_UNIFORM_BUFFER, offsetof(DebugUBO, debugColor), sizeof(glm::vec4), &debugColor);
+  glBindBufferRange(GL_UNIFORM_BUFFER, debugUBOBindingIndex, debugUboId, 0, sizeof(DebugUBO));
+
   // Desired gl default state
-  glViewport(0, 0, windowExtent.x, windowExtent.y);
+  glViewport(0, 0, appState.windowDimens.x, appState.windowDimens.y);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_CULL_FACE);
@@ -171,7 +192,7 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
     glm::mat4 viewMat = updateCamera(&camera, glm::vec3(cameraPosDelta), cameraPitchDelta, cameraYawDelta);
 
     // Use keyboard input to move our quad
-    const f32 spriteMoveSpeedPerSecond = flagIsSet(inputState.down, InputType::SHIFT) ? spriteRunMovePixelsPerSecond : spriteWalkMovePixelsPerSecond;
+    const f32 spriteMoveSpeedPerSecond = flagIsSet(inputState.down, InputType::SHIFT) ? spriteRunTilesPerSecond : spriteWalkTilesPerSecond;
     glm::vec2 spriteDelta = glm::vec2(
             stopwatch.deltaSeconds * spriteMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::RIGHT) - flagIsSet(inputState.down, InputType::LEFT)),
             stopwatch.deltaSeconds * spriteMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::UP) - flagIsSet(inputState.down, InputType::DOWN))
@@ -179,8 +200,8 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
     spritePosition += spriteDelta;
     ivec2 birdPixelDimens{23, 32}; // Note: THESE NUMBERS WERE MANUALLY PULLED AFTER INSPECTING THE BIRD SPRITE TEXTURE
     ivec2 birdImagePixelOffset{1, 0}; // Note: THESE NUMBERS WERE MANUALLY PULLED AFTER INSPECTING THE BIRD SPRITE TEXTURE
-    spritePosition.x = Clamp(spritePosition.x, -(emulatedSpriteResolution.x / 2.0f) + ((birdPixelDimens.x - birdImagePixelOffset.x) / 2.0f), (emulatedSpriteResolution.x / 2.0f) - ((birdPixelDimens.x + birdImagePixelOffset.x) / 2.0f));
-    spritePosition.y = Clamp(spritePosition.y, -(emulatedSpriteResolution.y / 2.0f) + ((birdPixelDimens.y - birdImagePixelOffset.y) / 2.0f), (emulatedSpriteResolution.y / 2.0f) - ((birdPixelDimens.y + birdImagePixelOffset.y) / 2.0f));
+    spritePosition.x = Clamp(spritePosition.x, 0.5f, emulatedSpriteResolution.x - 0.5f);
+    spritePosition.y = Clamp(spritePosition.y, 0.5f, emulatedSpriteResolution.y - 0.5f);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glBindBuffer(GL_UNIFORM_BUFFER, modelViewProjUboId);
@@ -195,7 +216,14 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
     drawTriangles(cubeVertAtt);
     glEnable(GL_CULL_FACE);
 
-    // draw quad
+    // draw debug quad
+    glUseProgram(debugQuadShaderProgram.id);
+    glBindBuffer(GL_UNIFORM_BUFFER, posUboId);
+    glBufferSubData(GL_UNIFORM_BUFFER, offsetof(PosUBO, pos), sizeof(glm::vec2), &spritePosition);
+    glBufferSubData(GL_UNIFORM_BUFFER, offsetof(PosUBO, pos), sizeof(glm::vec2), &spritePosition);
+    drawModel(quadModel);
+
+    // draw sprite
     glUseProgram(spriteShaderProgram.id);
     glBindBuffer(GL_UNIFORM_BUFFER, posUboId);
     glBufferSubData(GL_UNIFORM_BUFFER, offsetof(PosUBO, pos), sizeof(glm::vec2), &spritePosition);

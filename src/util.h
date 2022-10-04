@@ -12,8 +12,8 @@ struct Stopwatch {
   f64 deltaSeconds;
 };
 
-b32 flagIsSet(b32 flags, b32 queryFlag) { return (flags & queryFlag) ? 1 : 0; } // ensure the values are 0/1
-b32 flagsAreSet(b32 flags, b32 queryFlags) { return ((flags & queryFlags) == queryFlags) ? 1 : 0; }
+bool flagIsSet(b32 flags, b32 queryFlag) { return (flags & queryFlag); } // ensure the values are 0/1
+bool flagsAreSet(b32 flags, b32 queryFlags) { return ((flags & queryFlags) == queryFlags); }
 void setFlags(b32* outFlags, b32 newFlags) { *outFlags |= newFlags; }
 void clearFlags(b32* outFlags, b32 removeFlags) { *outFlags &= ~removeFlags; }
 

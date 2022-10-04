@@ -48,3 +48,8 @@ struct PosUBO {                 // base alignment   // aligned offset
   glm::vec2 emulatedWindowRes;  // 8                // 8
   glm::vec2 pos;                // 8                // 16
 };
+
+u32 debugUBOBindingIndex = 2;
+struct DebugUBO {               // base alignment   // aligned offset
+  glm::vec4 debugColor;         // 16                // 0
+};

@@ -30,17 +30,23 @@ void initWindow(u32 width, u32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_H
   *glContextHandle = context;
 }
 
-void deinitWindow(WINDOW_HANDLE* window) {
+void deinitWindow(WINDOW_HANDLE* window, GL_CONTEXT_HANDLE* glContextHandle) {
+  SDL_GL_DeleteContext((SDL_GLContext)*glContextHandle);
   SDL_DestroyWindow((SDL_Window*)*window);
   SDL_Quit();
   *window = nullptr;
+  *glContextHandle = nullptr;
 }
 
 inline void swapBuffers(WINDOW_HANDLE window) {
   SDL_GL_SwapWindow((SDL_Window*)window);
 }
 
-void getWindowExtent(WINDOW_HANDLE window, s32* width, s32* height) {
+void getWindowDimens(WINDOW_HANDLE window, ivec2* dimens) {
+  return getWindowDimens(window, &dimens->x, &dimens->y);
+}
+
+void getWindowDimens(WINDOW_HANDLE window, s32* width, s32* height) {
   SDL_GetWindowSize((SDL_Window*)window, width, height);
   assert(*width >= 0 && *height >= 0);
 }
