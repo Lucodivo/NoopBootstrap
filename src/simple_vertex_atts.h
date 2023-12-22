@@ -155,10 +155,10 @@ const u32 quadIndices[]{
 const u32 quadPosNormTexVertexAttSizeInBytes = 8 * sizeof(f32);
 const f32 quadPosNormTexVertexAttributes[] = {
         // positions		                // normal		                       // texCoords
-        0.f,  1.f, 0.f,	0.f,  0.f, 1.f,	0.f, 1.f,
-        0.f, 0.f, 0.f,	0.f,  0.f, 1.f,	0.f, 0.f,
-        1.f, 0.f, 0.0,	0.f,  0.f, 1.f,	1.f, 0.f,
-        1.f,  1.f, 0.f,	0.f,  0.f, 1.f,	1.f, 1.f,
+        -0.5f,  0.5f, 0.0f,	0.0f,  0.0f, 1.0f,	0.0f, 1.0f,
+        -0.5f, -0.5f, 0.0f,	0.0f,  0.0f, 1.0f,	0.0f, 0.0f,
+        0.5f, -0.5f, 0.0f,	0.0f,  0.0f, 1.0f,	1.0f, 0.0f,
+        0.5f,  0.5f, 0.0f,	0.0f,  0.0f, 1.0f,	1.0f, 1.0f,
 };
 // ===== Quad values (vec3 pos, vec3 norm, vec2 tex) =====
 

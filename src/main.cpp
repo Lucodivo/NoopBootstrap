@@ -1,22 +1,12 @@
 #include "main.h"
 
 #define INIT_WINDOW_WIDTH 1920
-#define INIT_WINDOW_HEIGHT 1080
+#define INIT_WINDOW_HEIGHT 1024
 #define INIT_ASPECT (f32)INIT_WINDOW_WIDTH / INIT_WINDOW_HEIGHT
-
-const glm::vec4 debugColor = glm::vec4(0.5f, 0.5f, 1.0f, 1.0f);
 
 void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle);
 
-struct AppState {
-  WINDOW_HANDLE windowHandle;
-  AUDIO_HANDLE audioHandle;
-  ivec2 windowDimens;
-  bool hiddenMouse;
-};
-
 int main(int argc, char* argv[]) {
-  // platform initialization
   WINDOW_HANDLE windowHandle;
   GL_CONTEXT_HANDLE glContextHandle;
   initWindow(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT, &windowHandle, &glContextHandle);
@@ -24,20 +14,16 @@ int main(int argc, char* argv[]) {
   initAudio(&audioHandle);
   loadOpenGL();
   initImgui(windowHandle, glContextHandle);
-
-  // program
   scene(windowHandle, audioHandle);
-
-  // platform breakdown
   deinitAudio(&audioHandle);
   deinitWindow(&windowHandle, &glContextHandle);
   return 0;
 }
 
-struct CollisionBox2D {
-  glm::vec2 lowerLeft;
-  glm::vec2 width;
-  glm::vec2 height;
+struct AppState {
+  WINDOW_HANDLE windowHandle;
+  AUDIO_HANDLE audioHandle;
+  ivec2 windowDimens;
 };
 
 void logV(bool* pOpen, const char* fmt, ...) {
@@ -52,15 +38,18 @@ void logV(bool* pOpen, const char* fmt, ...) {
 }
 
 void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
-  AppState appState;
+  AppState appState{};
   appState.windowHandle = windowHandle;
   appState.audioHandle = audioHandle;
 
-  getWindowDimens(windowHandle, &appState.windowDimens);
-  assert(INIT_WINDOW_WIDTH == appState.windowDimens.x && INIT_WINDOW_HEIGHT == appState.windowDimens.y);
+  const glm::vec4 debugColor = glm::vec4(0.5f, 0.5f, 1.0f, 1.0f);
 
-  appState.hiddenMouse = false;
-  hideMouse(appState.hiddenMouse);
+  getWindowDimens(windowHandle, &appState.windowDimens);
+  ivec2 tileSize{128, 128};
+  ivec2 emulatedSpriteResolution{appState.windowDimens.x / tileSize.x, appState.windowDimens.y / tileSize.y};
+
+  bool hiddenMouse = false;
+  hideMouse(hiddenMouse);
 
   // load 2d textures
   GLuint spiritTexture, birdTexture;
@@ -72,10 +61,8 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
   loadUpSong(audioHandle, "data/sounds/songs/fairy_loop.wav");
   loadUpSoundEffect(audioHandle, "data/sounds/clips/echo.wav");
 
-  // load models
+  // load simple vertex attributes for cube
   VertexAtt cubeVertAtt = initializeCubePosNormTexVertexAttBuffers();
-  Model quadModel; loadModel("data/models/quad.glb", &quadModel);
-
   // setup cube's initial model matrix
   glm::vec3 cubePosition = glm::vec3{0.0f, 0.0f, 0.0f};
   glm::vec3 cubeScale = glm::vec3(1.5f);
@@ -85,11 +72,15 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
   glm::mat4 cubeScaleRotationMat = glm::rotate(glm::scale(glm::mat4(), cubeScale),  Radians(-45.0f), cubeInitRotationAxis);
   glm::mat4 cubeTranslationMat = glm::translate(glm::mat4(), cubePosition);
 
+  // load model (w/ vertex attributes) through a gltf file
+  Model quadModel;
+  loadModel("data/models/quad.glb", &quadModel);
   // setup quad's initial model matrix
-  ivec2 pixelUpscale{8, 8}; // NOTE: Ensure resolution is equally divisible by upscale value
-  ivec2 emulatedPixelResolution{appState.windowDimens.x / pixelUpscale.x, appState.windowDimens.y / pixelUpscale.y};
-  glm::vec2 spriteTilePosition = glm::vec2{emulatedPixelResolution.x * 0.5f, emulatedPixelResolution.y * 0.5f};
-  const f32 spriteWalkTilesPerSecond = 16.0f;
+  glm::vec2 spritePosition = glm::vec2{(f32)emulatedSpriteResolution.x * 0.5f, (f32)emulatedSpriteResolution.y * 0.5f};
+  f32 qScale = 0.2f;
+  glm::vec3 quadScale = glm::vec3(qScale);
+  glm::mat4 quadScaleMat = glm::scale(glm::mat4(), quadScale);
+  const f32 spriteWalkTilesPerSecond = 4.0f;
   const f32 spriteRunTilesPerSecond = spriteWalkTilesPerSecond * 3.0f;
 
   // camera and projection initial values
@@ -101,15 +92,40 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
   ShaderProgram texShaderProgram = createShaderProgram("shaders/pos.vert", "shaders/texture.frag");
   glUseProgram(texShaderProgram.id);
 
-  ModelViewProjUniformBuffer mvpUbo;
-  mvpUbo.setProjection(&projMat);
+  // Create uniform buffer object for model-view-projection matrices=
+  // - generate id for view-model-proj buffer
+  GLuint modelViewProjUboId;
+  glGenBuffers(1, &modelViewProjUboId);
+  // - allocate memory for view-model-proj buffer
+  glBindBuffer(GL_UNIFORM_BUFFER, modelViewProjUboId);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(ModelViewProjUBO), nullptr, GL_STREAM_DRAW);
+  // - upload the projection matrix data to the buffer
+  glBufferSubData(GL_UNIFORM_BUFFER, offsetof(ModelViewProjUBO, proj), sizeof(glm::mat4), &projMat);
+  // - attach buffer to correct binding point (as specified in shader. ex: "binding = 0")
+  glBindBufferRange(GL_UNIFORM_BUFFER, modelViewProjUBOBindingIndex, modelViewProjUboId, 0, sizeof(ModelViewProjUBO));
+  glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
   ShaderProgram spriteShaderProgram = createShaderProgram("shaders/sprite.vert", "shaders/texture.frag");
   glUseProgram(spriteShaderProgram.id);
 
-  PixelUniformBuffer pixelUbo;
-  pixelUbo.setSpriteDimens(&birdTexDimens);
-  pixelUbo.setEmulatedWindowRes(&emulatedPixelResolution);
+  GLuint posUboId;
+  glGenBuffers(1, &posUboId);
+  glBindBuffer(GL_UNIFORM_BUFFER, posUboId);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(PosUBO), nullptr, GL_STREAM_DRAW);
+  glBufferSubData(GL_UNIFORM_BUFFER, offsetof(PosUBO, spriteDimens), sizeof(ivec2), &birdTexDimens);
+  glBufferSubData(GL_UNIFORM_BUFFER, offsetof(PosUBO, emulatedWindowRes), sizeof(ivec2), &emulatedSpriteResolution);
+  glBindBufferRange(GL_UNIFORM_BUFFER, posUBOBindingIndex, posUboId, 0, sizeof(PosUBO));
+  glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+  ShaderProgram debugQuadShaderProgram = createShaderProgram("shaders/sprite.vert", "shaders/single_color.frag");
+  glUseProgram(debugQuadShaderProgram.id);
+
+  GLuint debugUboId;
+  glGenBuffers(1, &debugUboId);
+  glBindBuffer(GL_UNIFORM_BUFFER, debugUboId);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(DebugUBO), nullptr, GL_STATIC_DRAW);
+  glBufferSubData(GL_UNIFORM_BUFFER, offsetof(DebugUBO, debugColor), sizeof(glm::vec4), &debugColor);
+  glBindBufferRange(GL_UNIFORM_BUFFER, debugUBOBindingIndex, debugUboId, 0, sizeof(DebugUBO));
 
   // Desired gl default state
   glViewport(0, 0, appState.windowDimens.x, appState.windowDimens.y);
@@ -141,8 +157,8 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
     getKeyboardInput(&inputState);
 
     auto toggleMouseAndCameraControl = [&]() {
-      appState.hiddenMouse = !appState.hiddenMouse;
-      hideMouse(appState.hiddenMouse);
+      hiddenMouse = !hiddenMouse;
+      hideMouse(hiddenMouse);
     };
 
     auto toggleMusic = [&]() {
@@ -179,8 +195,8 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
             forwardDeltaUnits * camera.forward.z + rightDeltaUnits * camera.right.z
             );
     cameraPosition += cameraPosDelta;
-    f32 cameraPitchDelta = appState.hiddenMouse ? static_cast<f32>(stopwatch.deltaSeconds * cameraPitchRotationSpeedPerSecond * inputState.mouseDeltaY) : 0.0f;
-    f32 cameraYawDelta = appState.hiddenMouse ? static_cast<f32>(stopwatch.deltaSeconds * cameraYawRotationSpeedPerSecond * -inputState.mouseDeltaX) : 0.0f;
+    f32 cameraPitchDelta = hiddenMouse ? static_cast<f32>(stopwatch.deltaSeconds * cameraPitchRotationSpeedPerSecond * inputState.mouseDeltaY) : 0.0f;
+    f32 cameraYawDelta = hiddenMouse ? static_cast<f32>(stopwatch.deltaSeconds * cameraYawRotationSpeedPerSecond * -inputState.mouseDeltaX) : 0.0f;
     glm::mat4 viewMat = updateCamera(&camera, glm::vec3(cameraPosDelta), cameraPitchDelta, cameraYawDelta);
 
     // Use keyboard input to move our quad
@@ -189,29 +205,34 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
             stopwatch.deltaSeconds * spriteMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::RIGHT) - flagIsSet(inputState.down, InputType::LEFT)),
             stopwatch.deltaSeconds * spriteMoveSpeedPerSecond * static_cast<f32>(flagIsSet(inputState.down, InputType::UP) - flagIsSet(inputState.down, InputType::DOWN))
             );
-      spriteTilePosition += spriteDelta;
-    glm::vec2 birdPixelDimens{23.0f, 32.0f}; // Note: THESE NUMBERS WERE MANUALLY PULLED AFTER INSPECTING THE BIRD SPRITE TEXTURE
-    ivec2 birdImagePixelOffset{1, 0}; // Note: THESE NUMBERS WERE MANUALLY PULLED AFTER INSPECTING THE BIRD SPRITE TEXTURE
-    spriteTilePosition.x = Clamp(spriteTilePosition.x, 0.0f, emulatedPixelResolution.x - birdTexDimens.x);
-    spriteTilePosition.y = Clamp(spriteTilePosition.y, 0.0f, emulatedPixelResolution.y - birdTexDimens.y);
-
-    // Set view matrix in Model-View-Projection uniform buffer
-    mvpUbo.setView(&viewMat);
+    spritePosition += spriteDelta;
+    spritePosition.x = Clamp(spritePosition.x, 0.5f, emulatedSpriteResolution.x - 0.5f);
+    spritePosition.y = Clamp(spritePosition.y, 0.5f, emulatedSpriteResolution.y - 0.5f);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glBindBuffer(GL_UNIFORM_BUFFER, modelViewProjUboId);
+    glBufferSubData(GL_UNIFORM_BUFFER, offsetof(ModelViewProjUBO, view), sizeof(glm::mat4), &viewMat);
 
     // draw cube
-    glm::mat4 cubeFrameModelMat = cubeTranslationMat * glm::rotate(cubeScaleRotationMat, static_cast<f32>(cubeActiveRotationPerSecond * stopwatch.totalElapsedSeconds), cubeActiveRotationAxis);
-    mvpUbo.setModel(&cubeFrameModelMat);
     glUseProgram(texShaderProgram.id);
+    glm::mat4 cubeFrameModelMat = cubeTranslationMat * glm::rotate(cubeScaleRotationMat, static_cast<f32>(cubeActiveRotationPerSecond * stopwatch.totalElapsedSeconds), cubeActiveRotationAxis);
+    glBufferSubData(GL_UNIFORM_BUFFER, offsetof(ModelViewProjUBO, model), sizeof(glm::mat4), &cubeFrameModelMat);
     glDisable(GL_CULL_FACE);
     setSampler2D(texShaderProgram.id, "albedoTex", spiritTexIndex);
     drawTriangles(cubeVertAtt);
     glEnable(GL_CULL_FACE);
 
+    // draw debug quad
+    glUseProgram(debugQuadShaderProgram.id);
+    glBindBuffer(GL_UNIFORM_BUFFER, posUboId);
+    glBufferSubData(GL_UNIFORM_BUFFER, offsetof(PosUBO, pos), sizeof(glm::vec2), &spritePosition);
+    glBufferSubData(GL_UNIFORM_BUFFER, offsetof(PosUBO, pos), sizeof(glm::vec2), &spritePosition);
+    drawModel(quadModel);
+
     // draw sprite
     glUseProgram(spriteShaderProgram.id);
-    pixelUbo.setPos(&spriteTilePosition);
+    glBindBuffer(GL_UNIFORM_BUFFER, posUboId);
+    glBufferSubData(GL_UNIFORM_BUFFER, offsetof(PosUBO, pos), sizeof(glm::vec2), &spritePosition);
     setSampler2D(spriteShaderProgram.id, "albedoTex", birdTexIndex);
     drawModel(quadModel);
 
@@ -239,13 +260,13 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
             if(ImGui::MenuItem("Navigation Bar", "Alt")) {
               showNavBar = !showNavBar;
             }
-            if (ImGui::MenuItem("Demo Window", NULL)) {
+            if (ImGui::MenuItem("Demo Window", nullptr)) {
               showDemoWindow = !showDemoWindow;
             }
-            if (ImGui::MenuItem("FPS", NULL)) {
+            if (ImGui::MenuItem("FPS", nullptr)) {
               showFPS = !showFPS;
             }
-            if (ImGui::MenuItem("Toggle Music", NULL)) {
+            if (ImGui::MenuItem("Toggle Music", nullptr)) {
               playMusic = !playMusic;
               pauseSong(audioHandle, !playMusic);
             }
@@ -265,7 +286,7 @@ void scene(WINDOW_HANDLE windowHandle, AUDIO_HANDLE audioHandle) {
         }ImGui::End();
       }
 
-      logV(&showDebug, "Pos: {X = %2.2f, Y = %2.2f}", spriteTilePosition.x, spriteTilePosition.y);
+      logV(&showDebug, "Pos: {X = %2.2f, Y = %2.2f}", spritePosition.x, spritePosition.y);
     }
     renderImGui();
 

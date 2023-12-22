@@ -30,4 +30,7 @@
 #include "model.h"
 #include "shader_program.h"
 #include "simple_vertex_atts.h"
+const glm::vec3 worldUp{0.0f, 1.0f, 0.0f};
 #include "camera.h"
+
+#define OUT

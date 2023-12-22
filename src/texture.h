@@ -57,9 +57,6 @@ void load2DTexture(const char* imgLocation, GLuint* textureId, s32* width, s32* 
   stbi_set_flip_vertically_on_load(flagIsSet(textureFlags, LoadTextureFlags::HORZ_FLIP));
   u8* data = stbi_load(imgLocation, width, height, &numChannels, 0 /*desired channels*/);
 
-  if(!data) {
-      printf("Cannot load image: %s\n", imgLocation);
-  }
   assert(data);
 
   load2DTexture(data, numChannels, *width, *height, textureId, textureFlags);

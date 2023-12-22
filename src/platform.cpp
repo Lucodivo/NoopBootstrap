@@ -10,7 +10,7 @@ void loadOpenGL() {
 }
 
 /* Window */
-void initWindow(u32 width, u32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_HANDLE* glContextHandle) {
+void initWindow(s32 width, s32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_HANDLE* glContextHandle) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_Window* window = SDL_CreateWindow(
           "bootstrap",
@@ -92,7 +92,6 @@ void getKeyboardInput(InputState* prevState) {
         prevState->quit = true;
         break;
       case SDL_MOUSEMOTION:
-        break;
       default:
         break;
     }
@@ -123,7 +122,7 @@ void closeFile(FILE_HANDLE file) {
 enum AudioFlags {
   ACTIVE = 1 << 0,
   PAUSED = 1 << 1,
-  LOOP = 1 << 2,
+  LOOPS = 1 << 2,
 };
 
 struct Sound {
@@ -132,6 +131,9 @@ struct Sound {
   u32 length;
   u32 readPos;
   b32 audioFlags;
+
+  bool active() const { return audioFlags & AudioFlags::ACTIVE; }
+  bool loops() const { return audioFlags & AudioFlags::LOOPS; }
 };
 
 struct AudioState {
@@ -141,21 +143,25 @@ struct AudioState {
   SDL_AudioDeviceID deviceId;
 };
 
-void sdlAudioCallback(void* userdata, u8* stream, s32 len) {
+/*
+  - SDL2 is not great for audio and SDL_MixAudioFormat is not meant for mixing more than two streams.
+      - A separate library is necessary for more complex audio.
+*/
+void sdlAudioCallback(void* userdata, u8* stream, s32 bytesRequested) {
   AudioState* audioState = static_cast<AudioState*>(userdata);
 
   // insert song into buffer if available
   Sound& song = audioState->song;
   if(flagIsSet(song.audioFlags, AudioFlags::ACTIVE) && !flagIsSet(song.audioFlags, AudioFlags::PAUSED)) {
-    s32 remainingAudio = song.length - song.readPos;
-    u32 bytesToWrite = Min(len, remainingAudio);
+    s32 remainingAudio = (s32)song.length - (s32)song.readPos;
+    u32 bytesToWrite = Min(bytesRequested, remainingAudio);
     memcpy(stream, song.buffer + song.readPos, bytesToWrite);
     song.readPos += bytesToWrite;
 
     // check to see if we reached the end of the song
     if(song.readPos == song.length) {
-      u32 remainingLen = len - bytesToWrite;
-      if(flagIsSet(song.audioFlags, AudioFlags::LOOP)) {
+      u32 remainingLen = bytesRequested - bytesToWrite;
+      if(flagIsSet(song.audioFlags, AudioFlags::LOOPS)) {
         memcpy(stream + bytesToWrite, song.buffer, remainingLen);
         song.readPos = remainingLen;
       } else {
@@ -165,7 +171,7 @@ void sdlAudioCallback(void* userdata, u8* stream, s32 len) {
     }
   } else {
     // clear the audio stream
-    memset(stream, 0, len);
+    memset(stream, 0, bytesRequested);
   }
 
   // play sound effect if available
@@ -173,8 +179,8 @@ void sdlAudioCallback(void* userdata, u8* stream, s32 len) {
   if(flagIsSet(soundEffect.audioFlags, AudioFlags::ACTIVE) &&
           !flagIsSet(soundEffect.audioFlags, AudioFlags::PAUSED) &&
           soundEffect.readPos != soundEffect.length) {
-    s32 remainingAudio = soundEffect.length - soundEffect.readPos;
-    u32 bytesToWrite = Min(len, remainingAudio);
+    s32 remainingAudio = (s32)soundEffect.length - (s32)soundEffect.readPos;
+    u32 bytesToWrite = Min(bytesRequested, remainingAudio);
     SDL_MixAudioFormat(stream, soundEffect.buffer + soundEffect.readPos, soundEffect.audioSpec.format, bytesToWrite, 128);
     soundEffect.readPos += bytesToWrite;
   }
@@ -195,7 +201,7 @@ void initAudio(AUDIO_HANDLE* handle) {
   desiredAudioSpec.callback = sdlAudioCallback;
   desiredAudioSpec.userdata = audioState;
 
-  audioState->deviceId = SDL_OpenAudioDevice(NULL, 0, &desiredAudioSpec, &audioState->audioSpec, 0);
+  audioState->deviceId = SDL_OpenAudioDevice(nullptr, 0, &desiredAudioSpec, &audioState->audioSpec, 0);
   SDL_PauseAudioDevice(audioState->deviceId, 0);
 
   *handle = audioState;
@@ -228,20 +234,20 @@ void loadUpSong(AUDIO_HANDLE handle, const char* fileName) {
     SDL_FreeWAV(song.buffer);
   }
 
-  if (SDL_LoadWAV(fileName, &song.audioSpec, &song.buffer, &song.length) == NULL) {
+  if (SDL_LoadWAV(fileName, &song.audioSpec, &song.buffer, &song.length) == nullptr) {
     fprintf(stderr, "Could not open wav sound file (%s fileName): %s\n", fileName, SDL_GetError());
   }
 
   // TODO: Potentially adjust some aspect of the audio spec for device
 
   song.audioFlags = 0;
-  setFlags(&song.audioFlags, AudioFlags::ACTIVE | AudioFlags::LOOP | AudioFlags::PAUSED);
+  setFlags(&song.audioFlags, AudioFlags::ACTIVE | AudioFlags::LOOPS | AudioFlags::PAUSED);
 }
 
 void pauseSong(AUDIO_HANDLE handle, bool pause) {
   AudioState* audioState = static_cast<AudioState*>(handle);
   Sound& song = audioState->song;
-  assert(flagIsSet(song.audioFlags, AudioFlags::ACTIVE));
+  assert(song.active());
   if(pause) {
     setFlags(&song.audioFlags, AudioFlags::PAUSED);
   } else {
@@ -253,16 +259,17 @@ void loadUpSoundEffect(AUDIO_HANDLE handle, const char* fileName) {
   AudioState* audioState = static_cast<AudioState*>(handle);
   Sound& soundEffect = audioState->soundEffect;
 
-  if(flagIsSet(soundEffect.audioFlags, AudioFlags::ACTIVE)) {
+  if(soundEffect.active()) {
     SDL_FreeWAV(soundEffect.buffer);
   }
 
-  if (SDL_LoadWAV(fileName, &soundEffect.audioSpec, &soundEffect.buffer, &soundEffect.length) == NULL) {
+  if (SDL_LoadWAV(fileName, &soundEffect.audioSpec, &soundEffect.buffer, &soundEffect.length) == nullptr) {
     fprintf(stderr, "Could not open wav sound file (%s fileName): %s\n", fileName, SDL_GetError());
   }
 
   // TODO: Potentially adjust some aspect of the audio spec for device
 
+  soundEffect.readPos = 0;
   soundEffect.audioFlags = 0;
   setFlags(&soundEffect.audioFlags, AudioFlags::ACTIVE | AudioFlags::PAUSED);
 }
@@ -270,7 +277,7 @@ void loadUpSoundEffect(AUDIO_HANDLE handle, const char* fileName) {
 void playSoundEffect(AUDIO_HANDLE handle) {
   AudioState* audioState = static_cast<AudioState*>(handle);
   Sound& soundEffect = audioState->soundEffect;
-  assert(flagIsSet(soundEffect.audioFlags, AudioFlags::ACTIVE));
+  assert(soundEffect.active());
   clearFlags(&soundEffect.audioFlags, AudioFlags::PAUSED);
   soundEffect.readPos = 0;
 }
@@ -293,7 +300,7 @@ void initImgui(WINDOW_HANDLE windowHandle, GL_CONTEXT_HANDLE glContextHandle) {
 
   // Setup Platform/Renderer bindings
   ImGui_ImplSDL2_InitForOpenGL((SDL_Window*)windowHandle, (SDL_GLContext*)glContextHandle);
-  ImGui_ImplOpenGL3_Init(NULL);
+  ImGui_ImplOpenGL3_Init(nullptr);
 }
 
 void newFrameImGui() {

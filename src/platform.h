@@ -24,17 +24,17 @@ struct InputState {
 void loadOpenGL();
 
 /* WINDOW */
-void initWindow(u32 width, u32 height, WINDOW_HANDLE* windowHandle, GL_CONTEXT_HANDLE* glContextHandle);
+void initWindow(u32 width, u32 height, OUT WINDOW_HANDLE* windowHandle, OUT GL_CONTEXT_HANDLE* glContextHandle);
 void deinitWindow(WINDOW_HANDLE* window, GL_CONTEXT_HANDLE* glContextHandle);
 inline void swapBuffers(WINDOW_HANDLE window);
-void getWindowDimens(WINDOW_HANDLE window, ivec2* dimens);
-void getWindowDimens(WINDOW_HANDLE window, s32* width, s32* height);
+void getWindowDimens(WINDOW_HANDLE window, OUT ivec2* dimens);
+void getWindowDimens(WINDOW_HANDLE window, OUT s32* width, OUT s32* height);
 
 /* INPUT */
 void getKeyboardInput(InputState* prevState);
 
 /* FILE */
-void openFile(const char* fileName, FILE_HANDLE* outFile, size_t* readInBytes);
+void openFile(const char* fileName, OUT FILE_HANDLE* outFile, OUT size_t* readInBytes);
 const char* fileBytes(FILE_HANDLE file);
 void closeFile(FILE_HANDLE file);
 

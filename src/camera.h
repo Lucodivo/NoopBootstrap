@@ -1,6 +1,5 @@
 #pragma once
 
-const glm::vec3 worldUp{0.0f, 1.0f, 0.0f};
 const f32 maxPitchFirstPerson = sin(Radians(85.0f));
 const f32 minPitchFirstPerson = sin(Radians(-85.0f));
 
